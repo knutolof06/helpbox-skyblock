@@ -66,6 +66,8 @@ for dest_dir in DEST_DIRS:
     ]
 
     for rel_path in files:
+        if dest_dir == "26.1.2" and rel_path == "src/main/resources/helpbox.mixins.json":
+            continue
         src_file = os.path.join(SRC_DIR, rel_path)
         dest_file = os.path.join(dest_dir, rel_path)
         os.makedirs(os.path.dirname(dest_file), exist_ok=True)
