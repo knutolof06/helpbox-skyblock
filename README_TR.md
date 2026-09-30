@@ -75,10 +75,10 @@
 
 ## 📥 Kurulum Rehberi
 
-1. Minecraft sürümünüze uygun **[Fabric Loader](https://fabricmc.net/)** kurun (**1.21.2**, **1.21.3** veya **1.21.4**).
+1. Minecraft sürümünüze uygun **[Fabric Loader](https://fabricmc.net/)** kurun (**26.1.2**, **26.2** veya **26.3**).
 2. **[Fabric API](https://modrinth.com/mod/fabric-api)** modunu indirin ve `mods` klasörüne atın.
 3. Sürümünüze uygun **`hypixel-helpbox`** `.jar` dosyasını `mods` klasörüne ekleyin:
-   - Minecraft 1.21.4 için: `hypixel-helpbox-26.3-1.0.0.jar`
-   - Minecraft 1.21.3 için: `hypixel-helpbox-26.2-1.0.0.jar`
-   - Minecraft 1.21.2 için: `hypixel-helpbox-26.1.2-1.0.0.jar`
+   - Minecraft 26.3 için: `hypixel-helpbox-26.3.jar`
+   - Minecraft 26.2 için: `hypixel-helpbox-26.2.jar`
+   - Minecraft 26.1.2 için: `hypixel-helpbox-26.1.2.jar`
 4. Oyunu başlatın ve keyfini çıkarın!
