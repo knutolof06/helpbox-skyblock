@@ -10,7 +10,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Fabric-blue?style=for-the-badge&logo=fabric" alt="Fabric" />
-  <img src="https://img.shields.io/badge/Minecraft-1.21.2%20|%201.21.3%20|%201.21.4-green?style=for-the-badge&logo=minecraft" alt="Minecraft Versions" />
+  <img src="https://img.shields.io/badge/Minecraft-26.1.2%20|%2026.2%20|%2026.3-green?style=for-the-badge&logo=minecraft" alt="Minecraft Versions" />
   <img src="https://img.shields.io/badge/Side-100%25%20Client-orange?style=for-the-badge" alt="Client-Side" />
   <img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" alt="License" />
 </p>
@@ -82,12 +82,12 @@ From **3D in-world GPS navigation** with relief-shaded minimaps to **Enhanced Va
 
 ## 📥 Installation
 
-1. Make sure you have **[Fabric Loader](https://fabricmc.net/)** installed for Minecraft **1.21.2**, **1.21.3**, or **1.21.4**.
+1. Make sure you have **[Fabric Loader](https://fabricmc.net/)** installed for Minecraft **26.1.2**, **26.2**, or **26.3**.
 2. Install **[Fabric API](https://modrinth.com/mod/fabric-api)**.
 3. Download the matching **`hypixel-helpbox`** `.jar` file for your Minecraft version:
-   - For Minecraft 26.3: `hypixel-helpbox-26.3-x.x.x.jar`
-   - For Minecraft 26.2: `hypixel-helpbox-26.2-x.x.x.jar`
-   - For Minecraft 26.1.2: `hypixel-helpbox-26.1.2-x.x.x.jar`
+   - For Minecraft 26.3: `hypixel-helpbox-26.3-1.0.0.jar`
+   - For Minecraft 26.2: `hypixel-helpbox-26.2-1.0.0.jar`
+   - For Minecraft 26.1.2: `hypixel-helpbox-26.1.2-1.0.0.jar`
 4. Drop the `.jar` into your `.minecraft/mods` folder.
 5. Launch the game and enjoy!
 
@@ -97,9 +97,9 @@ From **3D in-world GPS navigation** with relief-shaded minimaps to **Enhanced Va
 
 | Minecraft Version | Fabric Loader | Status | Mod Jar Name |
 | :---: | :---: | :---: | :---: |
-| **26.3** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.3.jar` |
-| **26.2** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.2.jar` |
-| **26.1.2** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.1.2.jar` |
+| **26.3** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.3-1.0.0.jar` |
+| **26.2** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.2-1.0.0.jar` |
+| **26.1.2** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.1.2-1.0.0.jar` |
 
 ---
 

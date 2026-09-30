@@ -78,7 +78,29 @@
 1. Minecraft sürümünüze uygun **[Fabric Loader](https://fabricmc.net/)** kurun (**26.1.2**, **26.2** veya **26.3**).
 2. **[Fabric API](https://modrinth.com/mod/fabric-api)** modunu indirin ve `mods` klasörüne atın.
 3. Sürümünüze uygun **`hypixel-helpbox`** `.jar` dosyasını `mods` klasörüne ekleyin:
-   - Minecraft 26.3 için: `hypixel-helpbox-26.3.jar`
-   - Minecraft 26.2 için: `hypixel-helpbox-26.2.jar`
-   - Minecraft 26.1.2 için: `hypixel-helpbox-26.1.2.jar`
+   - Minecraft 26.3 için: `hypixel-helpbox-26.3-1.0.0.jar`
+   - Minecraft 26.2 için: `hypixel-helpbox-26.2-1.0.0.jar`
+   - Minecraft 26.1.2 için: `hypixel-helpbox-26.1.2-1.0.0.jar`
 4. Oyunu başlatın ve keyfini çıkarın!
+
+---
+
+## 🌐 Desteklenen Sürümler
+
+| Minecraft Sürümü | Fabric Loader | Durum | Mod Jar Dosyası |
+| :---: | :---: | :---: | :---: |
+| **26.3** | `>= 0.16.x` | 🟢 Destekleniyor | `hypixel-helpbox-26.3-1.0.0.jar` |
+| **26.2** | `>= 0.16.x` | 🟢 Destekleniyor | `hypixel-helpbox-26.2-1.0.0.jar` |
+| **26.1.2** | `>= 0.16.x` | 🟢 Destekleniyor | `hypixel-helpbox-26.1.2-1.0.0.jar` |
+
+---
+
+## 📜 Lisans & Açık Kaynak
+
+Bu proje **MIT Lisansı** ile lisanslanmıştır. Kendi mod paketlerinize ekleyebilir, dilediğiniz gibi geliştirebilir ve kullanabilirsiniz.
+
+---
+
+<p align="center">
+  <sub>Hypixel SkyBlock topluluğu için ❤️ ile geliştirilmiştir.</sub>
+</p>
