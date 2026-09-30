@@ -1,0 +1,58 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group   = project.maven_group
+
+repositories {
+	flatDir { dirs 'libs' }
+	maven { url 'https://maven.fabricmc.net/' }
+	mavenCentral()
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	implementation name: 'uilib-fabric-20.1.4'
+	include name: 'uilib-fabric-20.1.4'
+	implementation name: 'midnightlib-1.9.3+26.1-fabric'
+	include name: 'midnightlib-1.9.3+26.1-fabric'
+}
+
+processResources {
+	filteringCharset = 'UTF-8'
+	def versionMap = [
+		"version"          : project.mod_version,
+		"loader_version"   : project.loader_version,
+		"minecraft_version": project.minecraft_version
+	]
+	inputs.properties versionMap
+
+	filesMatching("fabric.mod.json") {
+		expand versionMap
+	}
+}
+
+tasks.withType(ProcessResources).configureEach {
+	filteringCharset = 'UTF-8'
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = 'UTF-8'
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	def projectName = project.name
+	inputs.property "projectName", projectName
+}

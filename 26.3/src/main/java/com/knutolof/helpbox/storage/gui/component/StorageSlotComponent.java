@@ -1,0 +1,114 @@
+package com.knutolof.helpbox.storage.gui.component;
+
+import com.daqem.uilib.gui.component.AbstractComponent;
+import com.daqem.uilib.gui.component.sprite.SpriteComponent;
+import com.knutolof.helpbox.storage.config.EnhancedStorageConfig;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
+
+public class StorageSlotComponent extends AbstractComponent {
+
+    private final @Nullable SpriteComponent highlightBack;
+    private final @Nullable SpriteComponent highlightFront;
+    private final @Nullable TooltipItemComponent item;
+
+    private boolean hoverEnabled = true;
+    private SearchState searchState = SearchState.NONE;
+
+    public StorageSlotComponent(int x, int y, int width, int height,
+                                @Nullable Identifier highlightBackTexture,
+                                @Nullable Identifier highlightFrontTexture,
+                                @Nullable ItemStack stack) {
+        super(x, y, width, height);
+
+        this.highlightBack = highlightBackTexture == null ? null
+                : new SpriteComponent(0, 0, width, height, highlightBackTexture);
+        if (this.highlightBack != null) this.addComponent(this.highlightBack);
+
+        this.highlightFront = highlightFrontTexture == null ? null
+                : new SpriteComponent(0, 0, width, height, highlightFrontTexture);
+        if (this.highlightFront != null) this.addComponent(this.highlightFront);
+
+        if (stack != null && !stack.isEmpty()) {
+            this.item = new TooltipItemComponent(1, 1, stack, true);
+            this.item.setTooltipEnabled(EnhancedStorageConfig.showItemTooltipsOnCachedItems);
+            this.addComponent(this.item);
+        } else {
+            this.item = null;
+        }
+    }
+
+    public void setSearchState(SearchState searchState) {
+        this.searchState = searchState;
+    }
+
+    public void setTooltipEnabled(boolean tooltipEnabled) {
+        if (this.item != null) {
+            this.item.setTooltipEnabled(tooltipEnabled);
+        }
+    }
+
+    public boolean isHoverEnabled() {
+        return hoverEnabled;
+    }
+
+    public void setHoverEnabled(boolean hoverEnabled) {
+        this.hoverEnabled = hoverEnabled;
+    }
+
+    public @Nullable TooltipItemComponent getItem() {
+        return item;
+    }
+
+    protected boolean isHovered(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+        return mouseX >= getTotalX() && mouseX < getTotalX() + getWidth()
+                && mouseY >= getTotalY() && mouseY < getTotalY() + getHeight()
+                && guiGraphics.containsPointInScissor(mouseX, mouseY);
+    }
+
+    // Controls the rendering order: back highlight -> item -> front highlight.
+    // (The slot background itself is drawn by the card as one tiled sprite.)
+    @Override
+    public void extractRenderStateBase(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick, int parentWidth, int parentHeight) {
+        // Scissor only clips GPU output — skip the CPU-side extraction entirely for slots
+        // scrolled outside the viewport (cards straddling the viewport edge).
+        int totalX = getTotalX();
+        int totalY = getTotalY();
+        if (!guiGraphics.containsPointInScissor(totalX, totalY)
+                && !guiGraphics.containsPointInScissor(totalX, totalY + getHeight() - 1)) {
+            return;
+        }
+
+        boolean hovered = isHovered(guiGraphics, mouseX, mouseY);
+
+        if (searchState == SearchState.MATCH) {
+            guiGraphics.fill(totalX + 1, totalY + 1, totalX + 17, totalY + 17, 0x8033CC33);
+        }
+
+        // Children are leaves — extract them directly instead of via extractRenderStateBase,
+        // which allocates two filtered stream lists per component per frame.
+        if (hovered && highlightBack != null) {
+            highlightBack.extractRenderState(guiGraphics, mouseX, mouseY, partialTick, parentWidth, parentHeight);
+        }
+
+        if (item != null) {
+            item.extractRenderState(guiGraphics, mouseX, mouseY, partialTick, parentWidth, parentHeight);
+        }
+
+        if (hovered && highlightFront != null) {
+            highlightFront.extractRenderState(guiGraphics, mouseX, mouseY, partialTick, parentWidth, parentHeight);
+        }
+
+        if (searchState == SearchState.NO_MATCH) {
+            guiGraphics.fill(totalX + 1, totalY + 1, totalX + 17, totalY + 17, 0xB0101010);
+        }
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick, int parentWidth, int parentHeight) {
+    }
+
+    public enum SearchState {NONE, MATCH, NO_MATCH}
+}

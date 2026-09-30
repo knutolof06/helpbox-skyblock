@@ -1,0 +1,25 @@
+accessWidener   v2   official
+
+# ─── AbstractContainerScreen ────────────────────────────────────────────────
+# hoveredSlot alanı protected olduğundan doğrudan erişim için genişletiyoruz.
+# Mojang Mappings: net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen hoveredSlot Lnet/minecraft/world/inventory/Slot;
+
+# ─── Inventory Button Mixin ──────────────────────────────────────────────────
+# MixinContainerScreen'in @Shadow kullandığı alanlar — protected'dan accessible'a.
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen leftPos I
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen topPos I
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen imageWidth I
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen imageHeight I
+
+# FishingHook DATA_BITING - sunucudan senkronize edilen balık vuruş bilgisi
+accessible field net/minecraft/world/entity/projectile/FishingHook DATA_BITING Lnet/minecraft/network/syncher/EntityDataAccessor;
+accessible field net/minecraft/world/entity/projectile/FishingHook nibble I
+
+# Simulate right click for auto fish
+accessible field net/minecraft/client/KeyMapping clickCount I
+
+# Enhanced Storage Slot mutability
+mutable field net/minecraft/world/inventory/Slot x I
+mutable field net/minecraft/world/inventory/Slot y I
+

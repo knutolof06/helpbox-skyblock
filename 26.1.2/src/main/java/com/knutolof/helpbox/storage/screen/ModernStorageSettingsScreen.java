@@ -1,0 +1,226 @@
+package com.knutolof.helpbox.storage.screen;
+import com.knutolof.helpbox.storage.StorageInitializer;
+
+
+import com.knutolof.helpbox.storage.config.EnhancedStorageConfig;
+import com.knutolof.helpbox.storage.config.EnhancedStorageConfig.BackgroundType;
+import com.knutolof.helpbox.ui.ModernUiRenderHelper;
+import com.knutolof.helpbox.util.HelpBoxLang;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
+
+public class ModernStorageSettingsScreen extends Screen {
+
+    private final Screen parent;
+    private static final int COLOR_ACCENT = 0xFF38BDF8;
+    private static final int COLOR_CARD_BG = 0xF00F172A;
+    private static final int COLOR_CARD_BORDER = 0x6638BDF8;
+    private static final int COLOR_TEXT_PRIMARY = 0xFFFFFFFF;
+    private static final int COLOR_TEXT_MUTED = 0xFF94A3B8;
+
+    public ModernStorageSettingsScreen(Screen parent) {
+        super(Component.translatable("helpbox.ui.vault.settings_title"));
+        this.parent = parent;
+    }
+
+    private static boolean inRect(double px, double py, int x, int y, int w, int h) {
+        return px >= x && px < x + w && py >= y && py < y + h;
+    }
+
+    @Override
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        graphics.fill(0, 0, this.width, this.height, 0x99000000);
+
+        int cardW = 340;
+        int cardH = 260;
+        int cardX = (this.width - cardW) / 2;
+        int cardY = (this.height - cardH) / 2;
+
+        ModernUiRenderHelper.drawModernCard(graphics, cardX, cardY, cardW, cardH, 12, COLOR_CARD_BG, COLOR_CARD_BORDER);
+
+        // Header
+        graphics.text(this.font, HelpBoxLang.get("helpbox.ui.vault.settings_title", "✦ HelpBox Kasa Ayarları"), cardX + 16, cardY + 14, COLOR_ACCENT, false);
+        ModernUiRenderHelper.drawBadge(graphics, this.font, cardX + cardW - 65, cardY + 12, "VAULT", 0x3338BDF8, COLOR_ACCENT);
+
+        // Option 1: Tema (Transparent / Dark / Light)
+        int row1Y = cardY + 40;
+        graphics.text(this.font, HelpBoxLang.get("helpbox.ui.vault.theme", "Görünüm Teması:"), cardX + 16, row1Y + 3, COLOR_TEXT_PRIMARY, false);
+        BackgroundType curType = EnhancedStorageConfig.backgroundType;
+        BackgroundType[] types = {BackgroundType.TRANSPARENT, BackgroundType.DARK, BackgroundType.LIGHT};
+        String[] typeNames = {
+                HelpBoxLang.get("helpbox.ui.storage.theme_transparent", "Şeffaf"),
+                HelpBoxLang.get("helpbox.ui.storage.theme_dark", "Karanlık"),
+                HelpBoxLang.get("helpbox.ui.storage.theme_light", "Açık")
+        };
+        int btnX = cardX + cardW - 16 - (3 * 54);
+        for (int i = 0; i < types.length; i++) {
+            boolean active = (curType == types[i]);
+            boolean hov = inRect(mouseX, mouseY, btnX, row1Y, 50, 18);
+            ModernUiRenderHelper.drawPillButton(graphics, this.font, btnX, row1Y, 50, 18, typeNames[i], COLOR_ACCENT, hov, active);
+            btnX += 54;
+        }
+
+        // Option 2: Satır Başına Sayfa (1 - 6)
+        int row2Y = cardY + 70;
+        graphics.text(this.font, HelpBoxLang.get("helpbox.ui.vault.pages_per_row", "Satır Başına Sayfa:"), cardX + 16, row2Y + 3, COLOR_TEXT_PRIMARY, false);
+        int curPages = EnhancedStorageConfig.maxPagePerRow;
+        int pageBtnX = cardX + cardW - 16 - (6 * 24);
+        for (int p = 1; p <= 6; p++) {
+            boolean active = (curPages == p);
+            boolean hov = inRect(mouseX, mouseY, pageBtnX, row2Y, 20, 18);
+            ModernUiRenderHelper.drawPillButton(graphics, this.font, pageBtnX, row2Y, 20, 18, String.valueOf(p), COLOR_ACCENT, hov, active);
+            pageBtnX += 24;
+        }
+
+        // Option 3: Kart Boşluğu (Spacing: 0 - 6)
+        int row3Y = cardY + 100;
+        graphics.text(this.font, HelpBoxLang.get("helpbox.ui.vault.card_spacing", "Kart Aralığı (px):"), cardX + 16, row3Y + 3, COLOR_TEXT_PRIMARY, false);
+        int curSpacing = EnhancedStorageConfig.cardSpacing;
+        int spBtnX = cardX + cardW - 16 - (7 * 21);
+        for (int s = 0; s <= 6; s++) {
+            boolean active = (curSpacing == s);
+            boolean hov = inRect(mouseX, mouseY, spBtnX, row3Y, 18, 18);
+            ModernUiRenderHelper.drawPillButton(graphics, this.font, spBtnX, row3Y, 18, 18, String.valueOf(s), COLOR_ACCENT, hov, active);
+            spBtnX += 21;
+        }
+
+        // Option 4: Otomatik Kaydırma (Auto Scroll)
+        int row4Y = cardY + 130;
+        graphics.text(this.font, HelpBoxLang.get("helpbox.ui.vault.auto_scroll", "Oto Kaydırma:"), cardX + 16, row4Y + 3, COLOR_TEXT_PRIMARY, false);
+        EnhancedStorageConfig.AutoScrollMode curScroll = EnhancedStorageConfig.autoScrollToOpenPage;
+        EnhancedStorageConfig.AutoScrollMode[] scrollModes = {
+                EnhancedStorageConfig.AutoScrollMode.OFF,
+                EnhancedStorageConfig.AutoScrollMode.IF_PARTLY_HIDDEN,
+                EnhancedStorageConfig.AutoScrollMode.IF_FULLY_HIDDEN
+        };
+        String[] scrollNames = {
+                HelpBoxLang.get("helpbox.ui.vault.scroll_off", "Kapalı"),
+                HelpBoxLang.get("helpbox.ui.vault.scroll_partly", "Kısmi"),
+                HelpBoxLang.get("helpbox.ui.vault.scroll_fully", "Tam")
+        };
+        int scBtnX = cardX + cardW - 16 - (3 * 54);
+        for (int i = 0; i < scrollModes.length; i++) {
+            boolean active = (curScroll == scrollModes[i]);
+            boolean hov = inRect(mouseX, mouseY, scBtnX, row4Y, 50, 18);
+            ModernUiRenderHelper.drawPillButton(graphics, this.font, scBtnX, row4Y, 50, 18, scrollNames[i], COLOR_ACCENT, hov, active);
+            scBtnX += 54;
+        }
+
+        // Option 5: Depo / Rift Toggles
+        int row5Y = cardY + 162;
+        boolean tog1Hov = inRect(mouseX, mouseY, cardX + 16, row5Y, 40, 18);
+        ModernUiRenderHelper.drawModernToggle(graphics, this.font, cardX + 16, row5Y, EnhancedStorageConfig.enableOverlay, tog1Hov);
+        graphics.text(this.font, HelpBoxLang.get("helpbox.ui.vault.enable_vault", "Kasa Arayüzünü Etkinleştir"), cardX + 62, row5Y + 4, COLOR_TEXT_PRIMARY, false);
+
+        int row6Y = cardY + 188;
+        boolean tog2Hov = inRect(mouseX, mouseY, cardX + 16, row6Y, 40, 18);
+        ModernUiRenderHelper.drawModernToggle(graphics, this.font, cardX + 16, row6Y, EnhancedStorageConfig.enableRiftOverlay, tog2Hov);
+        graphics.text(this.font, HelpBoxLang.get("helpbox.ui.vault.enable_rift", "Rift Kasasını Etkinleştir"), cardX + 62, row6Y + 4, COLOR_TEXT_PRIMARY, false);
+
+        // Save & Close Button
+        int saveBtnY = cardY + cardH - 34;
+        boolean saveHov = inRect(mouseX, mouseY, cardX + 16, saveBtnY, cardW - 32, 22);
+        ModernUiRenderHelper.drawPillButton(graphics, this.font, cardX + 16, saveBtnY, cardW - 32, 22, HelpBoxLang.get("helpbox.ui.vault.save_close", "Kaydet & Kapat"), COLOR_ACCENT, saveHov, false);
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() != InputConstants.MOUSE_BUTTON_LEFT) return super.mouseClicked(event, doubleClick);
+
+        int cardW = 340;
+        int cardH = 260;
+        int cardX = (this.width - cardW) / 2;
+        int cardY = (this.height - cardH) / 2;
+
+        // Theme buttons
+        int row1Y = cardY + 40;
+        BackgroundType[] types = {BackgroundType.TRANSPARENT, BackgroundType.DARK, BackgroundType.LIGHT};
+        int btnX = cardX + cardW - 16 - (3 * 54);
+        for (BackgroundType type : types) {
+            if (inRect(event.x(), event.y(), btnX, row1Y, 50, 18)) {
+                EnhancedStorageConfig.backgroundType = type;
+                return true;
+            }
+            btnX += 54;
+        }
+
+        // Pages per row
+        int row2Y = cardY + 70;
+        int pageBtnX = cardX + cardW - 16 - (6 * 24);
+        for (int p = 1; p <= 6; p++) {
+            if (inRect(event.x(), event.y(), pageBtnX, row2Y, 20, 18)) {
+                EnhancedStorageConfig.maxPagePerRow = p;
+                return true;
+            }
+            pageBtnX += 24;
+        }
+
+        // Spacing
+        int row3Y = cardY + 100;
+        int spBtnX = cardX + cardW - 16 - (7 * 21);
+        for (int s = 0; s <= 6; s++) {
+            if (inRect(event.x(), event.y(), spBtnX, row3Y, 18, 18)) {
+                EnhancedStorageConfig.cardSpacing = s;
+                return true;
+            }
+            spBtnX += 21;
+        }
+
+        // Auto scroll
+        int row4Y = cardY + 130;
+        EnhancedStorageConfig.AutoScrollMode[] scrollModes = {
+                EnhancedStorageConfig.AutoScrollMode.OFF,
+                EnhancedStorageConfig.AutoScrollMode.IF_PARTLY_HIDDEN,
+                EnhancedStorageConfig.AutoScrollMode.IF_FULLY_HIDDEN
+        };
+        int scBtnX = cardX + cardW - 16 - (3 * 54);
+        for (EnhancedStorageConfig.AutoScrollMode mode : scrollModes) {
+            if (inRect(event.x(), event.y(), scBtnX, row4Y, 50, 18)) {
+                EnhancedStorageConfig.autoScrollToOpenPage = mode;
+                return true;
+            }
+            scBtnX += 54;
+        }
+
+        // Toggles
+        int row5Y = cardY + 162;
+        if (inRect(event.x(), event.y(), cardX + 16, row5Y, cardW - 32, 18)) {
+            EnhancedStorageConfig.enableOverlay = !EnhancedStorageConfig.enableOverlay;
+            return true;
+        }
+
+        int row6Y = cardY + 188;
+        if (inRect(event.x(), event.y(), cardX + 16, row6Y, cardW - 32, 18)) {
+            EnhancedStorageConfig.enableRiftOverlay = !EnhancedStorageConfig.enableRiftOverlay;
+            return true;
+        }
+
+        // Save & Close
+        int saveBtnY = cardY + cardH - 34;
+        if (inRect(event.x(), event.y(), cardX + 16, saveBtnY, cardW - 32, 22)) {
+            saveAndClose();
+            return true;
+        }
+
+        return super.mouseClicked(event, doubleClick);
+    }
+
+    private void saveAndClose() {
+        EnhancedStorageConfig.write(StorageInitializer.MOD_ID);
+        Minecraft.getInstance().setScreenAndShow(this.parent);
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == InputConstants.KEY_ESCAPE) {
+            saveAndClose();
+            return true;
+        }
+        return super.keyPressed(event);
+    }
+}

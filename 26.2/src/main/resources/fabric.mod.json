@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "helpbox",
+  "version": "${version}",
+
+  "name": "Hypixel HelpBox",
+  "description": "Hypixel SkyBlock Client-Side QoL mod with Enhanced Storage, 3D GPS, Console History, and Item Copier.",
+  "authors": [
+    "knutolof"
+  ],
+  "license": "MIT",
+  "icon": "assets/helpbox/icon.png",
+  "environment": "client",
+
+  "entrypoints": {
+    "client": [
+      "com.knutolof.helpbox.HelpBoxMod"
+    ]
+  },
+
+  "mixins": [
+    "helpbox.mixins.json"
+  ],
+  "accessWidener": "helpbox.accesswidener",
+
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "~${minecraft_version}"
+  }
+}

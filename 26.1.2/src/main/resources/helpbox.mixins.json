@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "package": "com.knutolof.helpbox.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "MixinAbstractComponent",
+    "MixinBlurredBackground",
+    "MixinChatComponent",
+    "MixinColorBackground",
+    "MixinContainerScreen",
+    "MixinGradientBackground",
+    "MixinKeyboardHandler",
+    "MixinPanoramaBackground",
+    "HelpBoxScreenSwapMixin",
+    "ClientPacketListenerMixin",
+    "ContainerScreenHighlightClipMixin",
+    "AbstractContainerScreenAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
