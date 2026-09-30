@@ -85,9 +85,9 @@ From **3D in-world GPS navigation** with relief-shaded minimaps to **Enhanced Va
 1. Make sure you have **[Fabric Loader](https://fabricmc.net/)** installed for Minecraft **1.21.2**, **1.21.3**, or **1.21.4**.
 2. Install **[Fabric API](https://modrinth.com/mod/fabric-api)**.
 3. Download the matching **`hypixel-helpbox`** `.jar` file for your Minecraft version:
-   - For Minecraft 1.21.4: `hypixel-helpbox-26.3-x.x.x.jar`
-   - For Minecraft 1.21.3: `hypixel-helpbox-26.2-x.x.x.jar`
-   - For Minecraft 1.21.2: `hypixel-helpbox-26.1.2-x.x.x.jar`
+   - For Minecraft 26.3: `hypixel-helpbox-26.3-x.x.x.jar`
+   - For Minecraft 26.2: `hypixel-helpbox-26.2-x.x.x.jar`
+   - For Minecraft 26.1.2: `hypixel-helpbox-26.1.2-x.x.x.jar`
 4. Drop the `.jar` into your `.minecraft/mods` folder.
 5. Launch the game and enjoy!
 
@@ -97,9 +97,9 @@ From **3D in-world GPS navigation** with relief-shaded minimaps to **Enhanced Va
 
 | Minecraft Version | Fabric Loader | Status | Mod Jar Name |
 | :---: | :---: | :---: | :---: |
-| **1.21.4** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.3-1.0.0.jar` |
-| **1.21.3** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.2-1.0.0.jar` |
-| **1.21.2** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.1.2-1.0.0.jar` |
+| **26.3** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.3.jar` |
+| **26.2** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.2.jar` |
+| **26.1.2** | `>= 0.16.x` | 🟢 Supported | `hypixel-helpbox-26.1.2.jar` |
 
 ---
 
