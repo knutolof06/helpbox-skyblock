@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 import java.util.Optional;
 
-@Mixin(value = Gui.class, priority = 500)
+@Mixin(value = Minecraft.class, priority = 500)
 public abstract class HelpBoxScreenSwapMixin {
 
     @ModifyVariable(method = "setScreen", at = @At("HEAD"), argsOnly = true, name = "screen")

@@ -66,7 +66,10 @@ for dest_dir in DEST_DIRS:
     ]
 
     for rel_path in files:
-        if dest_dir == "26.1.2" and rel_path == "src/main/resources/helpbox.mixins.json":
+        if dest_dir == "26.1.2" and rel_path in [
+            "src/main/resources/helpbox.mixins.json",
+            "src/main/java/com/knutolof/helpbox/mixin/HelpBoxScreenSwapMixin.java"
+        ]:
             continue
         src_file = os.path.join(SRC_DIR, rel_path)
         dest_file = os.path.join(dest_dir, rel_path)
