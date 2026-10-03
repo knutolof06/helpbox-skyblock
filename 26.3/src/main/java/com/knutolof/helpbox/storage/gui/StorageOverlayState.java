@@ -40,7 +40,7 @@ public class StorageOverlayState {
         navigatingUntil = System.currentTimeMillis() + 2000;
     }
 
-    private boolean isNavigating() {
+    public boolean isNavigating() {
         return System.currentTimeMillis() < navigatingUntil;
     }
 

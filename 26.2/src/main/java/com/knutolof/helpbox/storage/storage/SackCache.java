@@ -158,6 +158,16 @@ public final class SackCache {
         return Collections.unmodifiableList(customOrder);
     }
 
+    public void setCustomOrder(List<String> order) {
+        if (order == null) return;
+        if (!this.customOrder.equals(order)) {
+            this.customOrder.clear();
+            this.customOrder.addAll(order);
+            this.dirty = true;
+            saveToDisk();
+        }
+    }
+
     public void moveSack(SackKey key, int delta, List<SackKey> currentKeys) {
         if (customOrder.isEmpty()) {
             for (SackKey k : currentKeys) {

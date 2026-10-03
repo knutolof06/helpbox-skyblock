@@ -23,4 +23,12 @@ public abstract class ClientPacketListenerMixin {
     private void helpbox$onContainerContent(ClientboundContainerSetContentPacket packet, CallbackInfo ci) {
         ContainerContentTracker.markReceived(packet.containerId());
     }
+
+    @Inject(method = "handleContainerClose", at = @At("HEAD"), cancellable = true)
+    private void helpbox$onContainerClose(net.minecraft.network.protocol.game.ClientboundContainerClosePacket packet, CallbackInfo ci) {
+        if (com.knutolof.helpbox.storage.gui.SackOverlayState.session().isNavigating()
+                || com.knutolof.helpbox.storage.gui.StorageOverlayState.session().isNavigating()) {
+            ci.cancel();
+        }
+    }
 }

@@ -103,7 +103,9 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
                 this::onPageCardClicked, this::onSearchChanged);
 
         if (!autoScrolledToOpenCard) {
-            scrollLiveCardIntoView();
+            if (!state.isNavigating()) {
+                scrollLiveCardIntoView();
+            }
             autoScrolledToOpenCard = true;
         }
 
@@ -228,20 +230,38 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
             snap.add(slot.getItem().copy());
         }
         List<ItemStack> prev = state.getIndexSnapshot();
-        boolean changed = !stacksMatch(prev, snap);
+        boolean changed = !sacksMatch(prev, snap);
         if (changed) {
             state.setIndexSnapshot(snap);
+            syncCustomOrderFromSnapshot(snap);
         }
         return changed;
     }
 
-    private static boolean stacksMatch(List<ItemStack> a, List<ItemStack> b) {
+    private static boolean sacksMatch(List<ItemStack> a, List<ItemStack> b) {
         if (a == null || b == null) return a == b;
         if (a.size() != b.size()) return false;
         for (int i = 0; i < a.size(); i++) {
-            if (!ItemStack.matches(a.get(i), b.get(i))) return false;
+            ItemStack sa = a.get(i);
+            ItemStack sb = b.get(i);
+            if (sa.isEmpty() && sb.isEmpty()) continue;
+            if (sa.isEmpty() != sb.isEmpty()) return false;
+            if (!sa.getItem().equals(sb.getItem())) return false;
+            var ka = SackKey.fromIndexItem(sa);
+            var kb = SackKey.fromIndexItem(sb);
+            if (!ka.equals(kb)) return false;
         }
         return true;
+    }
+
+    private static void syncCustomOrderFromSnapshot(List<ItemStack> snap) {
+        List<String> order = new ArrayList<>();
+        for (ItemStack s : snap) {
+            if (!s.isEmpty()) {
+                SackKey.fromIndexItem(s).ifPresent(k -> order.add(k.id()));
+            }
+        }
+        SackCache.getInstance().setCustomOrder(order);
     }
 
     private Optional<SackKey> indexItemAt(double mx, double my) {
@@ -388,9 +408,11 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
         syncSlotPositions();
 
         if (openKey.type() == SackKey.Type.SACK_INDEX && ContainerContentTracker.hasReceived(this.menu.containerId)) {
-            boolean changed = captureIndexSnapshot();
-            if (changed) {
-                this.rebuildWidgets();
+            if (!state.isNavigating() && pendingAutoOpen == null) {
+                boolean changed = captureIndexSnapshot();
+                if (changed) {
+                    this.rebuildWidgets();
+                }
             }
         }
 
@@ -405,6 +427,9 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
                 if (matchesSackKey(slot.getItem(), target)) {
                     state.beginNavigation();
                     clickContainerSlot(Minecraft.getInstance(), this.menu.containerId, slot.index, 1);
+                    if (Minecraft.getInstance().player != null) {
+                        Minecraft.getInstance().player.containerMenu.setCarried(ItemStack.EMPTY);
+                    }
                     return;
                 }
             }
@@ -466,6 +491,9 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
                 if (matchesSackKey(slot.getItem(), key)) {
                     state.beginNavigation();
                     clickContainerSlot(mc, this.menu.containerId, slot.index, 1);
+                    if (mc.player != null) {
+                        mc.player.containerMenu.setCarried(ItemStack.EMPTY);
+                    }
                     return;
                 }
             }
@@ -913,17 +941,58 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
             if (wasDragging && isOverPageOverview(event.x(), event.y())) {
                 SackCardComponent targetCard = cardAt(event.x(), event.y());
                 if (targetCard != null && !targetCard.getKey().equals(sourceKey) && targetCard.getKey().type() != SackKey.Type.SACK_INDEX) {
-                    List<SackKey> displayKeys = layout.getSackCards().stream()
-                            .map(SackCardComponent::getKey)
-                            .filter(k -> k.type() != SackKey.Type.SACK_INDEX)
-                            .toList();
-                    SackCache.getInstance().swapSacks(sourceKey, targetCard.getKey(), displayKeys);
+                    swapSackPositions(sourceKey, targetCard.getKey());
                     this.rebuildWidgets();
                     return true;
                 }
             }
         }
         return super.mouseReleased(event);
+    }
+
+    private void swapSackPositions(SackKey keyA, SackKey keyB) {
+        List<ItemStack> snap = new ArrayList<>(state.getIndexSnapshot());
+        int slotA = -1;
+        int slotB = -1;
+        for (int i = 0; i < snap.size(); i++) {
+            ItemStack stack = snap.get(i);
+            if (stack.isEmpty()) continue;
+            var optKey = SackKey.fromIndexItem(stack);
+            if (optKey.isPresent()) {
+                SackKey canonical = SackKey.canonical(optKey.get());
+                if (slotA == -1 && canonical.equals(SackKey.canonical(keyA))) {
+                    slotA = i;
+                } else if (slotB == -1 && canonical.equals(SackKey.canonical(keyB))) {
+                    slotB = i;
+                }
+            }
+        }
+
+        if (slotA != -1 && slotB != -1 && slotA != slotB) {
+            java.util.Collections.swap(snap, slotA, slotB);
+            state.setIndexSnapshot(snap);
+            syncCustomOrderFromSnapshot(snap);
+            SackCache.getInstance().saveToDisk();
+
+            if (openKey.type() == SackKey.Type.SACK_INDEX) {
+                Minecraft mc = Minecraft.getInstance();
+                int containerSlots = this.menu.getRowCount() * 9;
+                if (slotA < containerSlots && slotB < containerSlots) {
+                    clickContainerSlot(mc, this.menu.containerId, slotA, 0);
+                    clickContainerSlot(mc, this.menu.containerId, slotB, 0);
+                    clickContainerSlot(mc, this.menu.containerId, slotA, 0);
+                    if (mc.player != null) {
+                        mc.player.containerMenu.setCarried(ItemStack.EMPTY);
+                    }
+                }
+            }
+        } else {
+            List<SackKey> displayKeys = layout.getSackCards().stream()
+                    .map(SackCardComponent::getKey)
+                    .filter(k -> k.type() != SackKey.Type.SACK_INDEX)
+                    .toList();
+            SackCache.getInstance().swapSacks(keyA, keyB, displayKeys);
+        }
     }
 
     @Override

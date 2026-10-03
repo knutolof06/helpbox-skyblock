@@ -196,48 +196,56 @@ public class SackOverlayLayout {
         int titleAreaHeight = font.lineHeight + 2;
 
         List<ItemStack> snapshot = state.getIndexSnapshot();
-        Set<SackKey> indexSackKeys = new LinkedHashSet<>();
-        if (snapshot != null) {
+        List<SackKey> pageKeys = new ArrayList<>();
+        Set<SackKey> seen = new HashSet<>();
+
+        if (snapshot != null && !snapshot.isEmpty()) {
             for (ItemStack stack : snapshot) {
                 if (!stack.isEmpty()) {
-                    SackKey.fromIndexItem(stack).ifPresent(k -> indexSackKeys.add(SackKey.canonical(k)));
+                    var optKey = SackKey.fromIndexItem(stack);
+                    if (optKey.isPresent()) {
+                        SackKey canonical = SackKey.canonical(optKey.get());
+                        if (canonical.type() != SackKey.Type.SACK_INDEX && seen.add(canonical)) {
+                            pageKeys.add(canonical);
+                        }
+                    }
                 }
             }
         }
 
-        Set<SackKey> keysToDisplay = new LinkedHashSet<>();
         SackKey canonicalLiveKey = (liveKey != null && liveKey.type() != SackKey.Type.SACK_INDEX) ? SackKey.canonical(liveKey) : null;
-        if (canonicalLiveKey != null) {
-            keysToDisplay.add(canonicalLiveKey);
-        }
 
-        if (!indexSackKeys.isEmpty()) {
-            keysToDisplay.addAll(indexSackKeys);
-        } else {
+        if (pageKeys.isEmpty()) {
             Set<SackKey> known = SackCache.getInstance().allKnown();
             if (known.isEmpty()) {
-                for (SackKey k : SackCache.getInstance().all().keySet()) keysToDisplay.add(SackKey.canonical(k));
+                for (SackKey k : SackCache.getInstance().all().keySet()) {
+                    SackKey c = SackKey.canonical(k);
+                    if (c.type() != SackKey.Type.SACK_INDEX && seen.add(c)) pageKeys.add(c);
+                }
             } else {
-                for (SackKey k : known) keysToDisplay.add(SackKey.canonical(k));
+                for (SackKey k : known) {
+                    SackKey c = SackKey.canonical(k);
+                    if (c.type() != SackKey.Type.SACK_INDEX && seen.add(c)) pageKeys.add(c);
+                }
             }
-        }
-
-        List<SackKey> pageKeys = new ArrayList<>(keysToDisplay.stream()
-                .filter(k -> k.type() != SackKey.Type.SACK_INDEX)
-                .toList());
-
-        List<String> customOrder = SackCache.getInstance().getCustomOrder();
-        if (!customOrder.isEmpty()) {
-            pageKeys.sort((a, b) -> {
-                int idxA = customOrder.indexOf(a.id());
-                int idxB = customOrder.indexOf(b.id());
-                if (idxA == -1) idxA = 9999;
-                if (idxB == -1) idxB = 9999;
-                if (idxA != idxB) return Integer.compare(idxA, idxB);
-                return SackKey.DISPLAY_ORDER.compare(a, b);
-            });
+            List<String> customOrder = SackCache.getInstance().getCustomOrder();
+            if (!customOrder.isEmpty()) {
+                pageKeys.sort((a, b) -> {
+                    int idxA = customOrder.indexOf(a.id());
+                    int idxB = customOrder.indexOf(b.id());
+                    if (idxA == -1) idxA = 9999;
+                    if (idxB == -1) idxB = 9999;
+                    if (idxA != idxB) return Integer.compare(idxA, idxB);
+                    return SackKey.DISPLAY_ORDER.compare(a, b);
+                });
+            } else {
+                pageKeys.sort(SackKey.DISPLAY_ORDER);
+            }
         } else {
-            pageKeys.sort(SackKey.DISPLAY_ORDER);
+            // Append live sack if not in snapshot yet, avoiding jumping to the front
+            if (canonicalLiveKey != null && seen.add(canonicalLiveKey)) {
+                pageKeys.add(canonicalLiveKey);
+            }
         }
 
         if (SackConfig.showSackGoBackCard && liveKey != null && liveKey.type() != SackKey.Type.SACK_INDEX) {
