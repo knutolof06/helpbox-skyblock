@@ -71,7 +71,7 @@ def main():
         
         libs_dir = os.path.join(v_dir, "build", "libs")
         for f in os.listdir(libs_dir):
-            if f.endswith(".jar") and not f.endswith("-sources.jar"):
+            if f.endswith(f"-{target_version}.jar") and not f.endswith("-sources.jar"):
                 src_jar = os.path.join(libs_dir, f)
                 dest_jar = os.path.join(DEST_JAR_DIR, f)
                 shutil.copyfile(src_jar, dest_jar)
