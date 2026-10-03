@@ -1,6 +1,7 @@
 package com.knutolof.helpbox.storage.storage;
 
 import com.knutolof.helpbox.storage.util.TextUtils;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -140,6 +141,31 @@ public record SackKey(Type type, String customName) {
         }
 
         return fromTitle(nameComp);
+    }
+
+    public static boolean hasSacksInInventory(Minecraft mc) {
+        if (mc == null || mc.player == null) return false;
+        var inv = mc.player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (!item.isEmpty() && isSackItem(item)) {
+                return true;
+            }
+        }
+        if (mc.player.containerMenu != null) {
+            ItemStack carried = mc.player.containerMenu.getCarried();
+            if (!carried.isEmpty() && isSackItem(carried)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isSackItem(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        String name = TextUtils.stripText(stack.getHoverName()).toLowerCase();
+        if (!name.contains("sack")) return false;
+        return fromIndexItem(stack).isPresent();
     }
 
     public static Optional<SackKey> fromId(String id) {

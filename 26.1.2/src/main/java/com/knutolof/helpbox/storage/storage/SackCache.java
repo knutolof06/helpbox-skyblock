@@ -28,6 +28,7 @@ public final class SackCache {
     private final List<String> customOrder = new ArrayList<>();
     private final List<ItemStack> indexSnapshot = new ArrayList<>();
     private final Object ioLock = new Object();
+    private boolean sackOfSacksUnlocked = true;
     private boolean dirty = false;
 
     private SackCache() {
@@ -35,6 +36,18 @@ public final class SackCache {
 
     public static SackCache getInstance() {
         return INSTANCE;
+    }
+
+    public boolean isSackOfSacksUnlocked() {
+        return sackOfSacksUnlocked;
+    }
+
+    public void setSackOfSacksUnlocked(boolean unlocked) {
+        if (this.sackOfSacksUnlocked != unlocked) {
+            this.sackOfSacksUnlocked = unlocked;
+            this.dirty = true;
+            saveToDisk();
+        }
     }
 
     public List<ItemStack> getIndexSnapshot() {
@@ -251,6 +264,7 @@ public final class SackCache {
                     .ifPresent(indexSnapTag::add);
         }
         root.put("indexSnapshot", indexSnapTag);
+        root.putBoolean("sackOfSacksUnlocked", sackOfSacksUnlocked);
 
         pages.forEach((key, page) -> {
             ListTag list = new ListTag();
@@ -340,9 +354,11 @@ public final class SackCache {
             }
         });
 
+        this.sackOfSacksUnlocked = root.getBoolean("sackOfSacksUnlocked").orElse(true);
+
         int loaded = 0;
         for (String id : root.keySet()) {
-            if (id.equals("known") || id.equals("customOrder") || id.equals("indexSnapshot")) continue;
+            if (id.equals("known") || id.equals("customOrder") || id.equals("indexSnapshot") || id.equals("sackOfSacksUnlocked")) continue;
 
             Optional<SackKey> keyOpt = SackKey.fromId(id);
             if (keyOpt.isEmpty()) continue;
@@ -393,6 +409,7 @@ public final class SackCache {
         pages.clear();
         knownPages.clear();
         indexSnapshot.clear();
+        sackOfSacksUnlocked = true;
         dirty = false;
         loadFromDisk();
     }

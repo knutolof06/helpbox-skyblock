@@ -3,8 +3,10 @@ package com.knutolof.helpbox.mixin;
 import com.knutolof.helpbox.storage.StorageInitializer;
 import com.knutolof.helpbox.storage.config.EnhancedStorageConfig;
 import com.knutolof.helpbox.storage.config.SackConfig;
+import com.knutolof.helpbox.storage.gui.SackOverlayState;
 import com.knutolof.helpbox.storage.screen.SackContainerScreen;
 import com.knutolof.helpbox.storage.screen.StorageContainerScreen;
+import com.knutolof.helpbox.storage.storage.SackCache;
 import com.knutolof.helpbox.storage.storage.SackKey;
 import com.knutolof.helpbox.storage.storage.StorageKey;
 import net.minecraft.client.Minecraft;
@@ -47,13 +49,37 @@ public abstract class HelpBoxScreenSwapMixin {
                 return screen;
             }
 
-            if (SackConfig.enableSackOverlay) {
-                return new SackContainerScreen(
-                        chestMenu,
-                        Minecraft.getInstance().player.getInventory(),
-                        title,
-                        sackKey.get());
+            if (!SackConfig.enableSackOverlay) {
+                return screen;
             }
+
+            SackKey key = sackKey.get();
+            Minecraft mc = Minecraft.getInstance();
+
+            boolean isIndex = key.type() == SackKey.Type.SACK_INDEX;
+            boolean isNavigating = SackOverlayState.session().isNavigating();
+
+            if (isIndex) {
+                // Opened Sack of Sacks menu directly (/sacks) -> Sack of Sacks is unlocked!
+                SackCache.getInstance().setSackOfSacksUnlocked(true);
+            } else if (!isNavigating) {
+                // An individual sack was opened directly from inventory/hand (not by overlay navigation).
+                // If Sack of Sacks is not unlocked on this profile, or sacks are carried in inventory,
+                // open the original vanilla/Hypixel container screen!
+                boolean hasSacksInInv = SackKey.hasSacksInInventory(mc);
+                boolean sackOfSacksLocked = !SackCache.getInstance().isSackOfSacksUnlocked();
+                boolean neverOpenedIndex = SackCache.getInstance().getIndexSnapshot().isEmpty();
+
+                if (sackOfSacksLocked || (hasSacksInInv && (neverOpenedIndex || SackConfig.openOriginalIfSacksInInventory))) {
+                    return screen;
+                }
+            }
+
+            return new SackContainerScreen(
+                    chestMenu,
+                    mc.player.getInventory(),
+                    title,
+                    key);
         }
 
         // 2. Vault / Rift check (HelpBox Storage Screen)

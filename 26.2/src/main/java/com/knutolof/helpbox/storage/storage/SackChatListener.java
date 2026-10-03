@@ -40,6 +40,15 @@ public class SackChatListener {
                         SackCache.getInstance().updateItemDelta(itemName, amount);
                     }
                 }
+            } else {
+                String lower = text.toLowerCase();
+                if ((lower.contains("sack of sacks") || lower.contains("sacks")) &&
+                        (lower.contains("haven't unlocked") || lower.contains("must unlock") ||
+                                lower.contains("unlock the") || lower.contains("locked") ||
+                                lower.contains("don't have access") || lower.contains("kilitli") ||
+                                lower.contains("açmadın") || lower.contains("kilidini aç"))) {
+                    SackCache.getInstance().setSackOfSacksUnlocked(false);
+                }
             }
         });
     }

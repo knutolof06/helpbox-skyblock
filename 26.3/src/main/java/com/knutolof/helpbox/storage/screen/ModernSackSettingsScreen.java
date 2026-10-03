@@ -14,6 +14,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import java.util.List;
+import java.util.Optional;
 
 public class ModernSackSettingsScreen extends Screen {
 
@@ -38,7 +40,7 @@ public class ModernSackSettingsScreen extends Screen {
         graphics.fill(0, 0, this.width, this.height, 0x99000000);
 
         int cardW = 340;
-        int cardH = 340;
+        int cardH = 370;
         int cardX = (this.width - cardW) / 2;
         int cardY = (this.height - cardH) / 2;
 
@@ -151,6 +153,26 @@ public class ModernSackSettingsScreen extends Screen {
             pBtnX -= 4;
         }
 
+        // Option 10: Sack of Sacks Durumu
+        int row10Y = cardY + 278;
+        graphics.text(this.font, HelpBoxLang.get("helpbox.ui.sacks.sos_status", "Sack of Sacks:"), cardX + 16, row10Y + 4, COLOR_TEXT_PRIMARY, false);
+
+        boolean sosUnlocked = com.knutolof.helpbox.storage.storage.SackCache.getInstance().isSackOfSacksUnlocked();
+        String sosText = sosUnlocked
+                ? HelpBoxLang.get("helpbox.ui.sacks.sos_unlocked", "✔ Açık")
+                : HelpBoxLang.get("helpbox.ui.sacks.sos_locked", "✕ Kilitli");
+        int sosColor = sosUnlocked ? 0xFF22C55E : 0xFFEF4444;
+        int sosBw = this.font.width(sosText) + 16;
+        int sosX = cardX + cardW - 16 - sosBw;
+        boolean sosHov = inRect(mouseX, mouseY, sosX, row10Y, sosBw, 18);
+        ModernUiRenderHelper.drawPillButton(graphics, this.font, sosX, row10Y, sosBw, 18, sosText, sosColor, sosHov, true);
+        if (sosHov) {
+            String desc = sosUnlocked
+                    ? HelpBoxLang.get("helpbox.ui.sacks.sos_unlocked_desc", "Sack of Sacks açık: /sacks arayüzü HelpBox olarak açılır.")
+                    : HelpBoxLang.get("helpbox.ui.sacks.sos_locked_desc", "Sack of Sacks kilitli: Sacklar orijinal arayüzle açılır.");
+            graphics.setTooltipForNextFrame(this.font, List.of(Component.literal(desc)), Optional.empty(), mouseX, mouseY);
+        }
+
         // Save & Close Button
         int saveBtnY = cardY + cardH - 34;
         boolean saveHov = inRect(mouseX, mouseY, cardX + 16, saveBtnY, cardW - 32, 22);
@@ -162,7 +184,7 @@ public class ModernSackSettingsScreen extends Screen {
         if (event.button() != InputConstants.MOUSE_BUTTON_LEFT) return super.mouseClicked(event, doubleClick);
 
         int cardW = 340;
-        int cardH = 340;
+        int cardH = 370;
         int cardX = (this.width - cardW) / 2;
         int cardY = (this.height - cardH) / 2;
 
@@ -262,6 +284,24 @@ public class ModernSackSettingsScreen extends Screen {
                 return true;
             }
             pBtnX -= 4;
+        }
+
+        // Option 10: Sack of Sacks click
+        int row10Y = cardY + 278;
+        boolean curSos = com.knutolof.helpbox.storage.storage.SackCache.getInstance().isSackOfSacksUnlocked();
+        String sText = curSos
+                ? HelpBoxLang.get("helpbox.ui.sacks.sos_unlocked", "✔ Açık")
+                : HelpBoxLang.get("helpbox.ui.sacks.sos_locked", "✕ Kilitli");
+        int sBw = this.font.width(sText) + 16;
+        int sX = cardX + cardW - 16 - sBw;
+        if (inRect(event.x(), event.y(), sX, row10Y, sBw, 18)) {
+            com.knutolof.helpbox.storage.storage.SackCache.getInstance().setSackOfSacksUnlocked(!curSos);
+            if (this.minecraft != null && this.minecraft.player != null) {
+                this.minecraft.player.sendSystemMessage(Component.translatable(
+                        !curSos ? "helpbox.ui.sacks.sos_toggled_unlocked" : "helpbox.ui.sacks.sos_toggled_locked"
+                ));
+            }
+            return true;
         }
 
         // Save & Close button

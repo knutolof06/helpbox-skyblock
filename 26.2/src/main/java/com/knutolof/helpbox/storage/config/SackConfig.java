@@ -20,6 +20,9 @@ public class SackConfig extends MidnightConfig {
     public static boolean showSackIndexPanel = true;
 
     @Entry
+    public static boolean openOriginalIfSacksInInventory = true;
+
+    @Entry
     public static boolean showSackSettingsButton = true;
 
     @Entry
