@@ -1,4 +1,4 @@
-﻿{
+{
   "key.category.helpbox.helpbox": "Hypixel HelpBox",
   "key.helpbox.copy_item_name": "Eşya İsmini Kopyala",
   "key.helpbox.copy_item_skull": "Kafa / Doku Kodunu Kopyala",
@@ -250,8 +250,8 @@
   "helpbox.ui.sacks.only_official": "Yalnızca Resmi Sacks",
   "helpbox.ui.sacks.show_overview": "Genel Bakış Kartını Göster",
   "helpbox.ui.sacks.index_panel": "Sack Çantası (Sack of Sacks)",
-  "helpbox.ui.sacks.index_panel_empty": "Envanterdeki sack'e Shift+tıkla",
-  "helpbox.ui.sacks.index_panel_open_hint": "Tık: sack aç | Sağ/Shift-tık: kaldır",
+  "helpbox.ui.sacks.index_panel_empty": "Sack of Sacks'ı açmak için tıkla",
+  "helpbox.ui.sacks.index_panel_open_hint": "Sackları yönetmek için tıkla (/sacks)",
   "helpbox.ui.sacks.show_index_panel": "Sack of Sacks Panelini Göster",
   "helpbox.ui.sacks.save_close": "Kaydet & Kapat",
   "helpbox.ui.picker.cat_all": "Tümü",

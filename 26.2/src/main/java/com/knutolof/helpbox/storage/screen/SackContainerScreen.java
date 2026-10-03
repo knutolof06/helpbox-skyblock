@@ -202,66 +202,61 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
             setSlotX(slot, -9999);
             setSlotY(slot, -9999);
         }
-    }
 
-    /** Index (0..35) of the stash slot under the mouse, or -1. */
-    private int indexSlotAt(double mx, double my) {
         var panel = layout.getIndexPanel();
-        if (panel == null) return -1;
-        int localX = (int) (mx - panel.getTotalX()) - SackOverlayLayout.INDEX_GRID_X;
-        int localY = (int) (my - panel.getTotalY()) - SackOverlayLayout.INDEX_GRID_Y;
-        if (localX < 0 || localX >= SackOverlayLayout.INDEX_COLS * 18) return -1;
-        if (localY < 0 || localY >= SackOverlayLayout.INDEX_ROWS * 18) return -1;
-        return (localY / 18) * SackOverlayLayout.INDEX_COLS + (localX / 18);
-    }
+        if (panel == null) return;
 
-    private List<ItemStack> stashCopy() {
-        int total = SackOverlayLayout.INDEX_COLS * SackOverlayLayout.INDEX_ROWS;
-        List<ItemStack> list = new ArrayList<>(state.getIndexSnapshot());
-        while (list.size() < total) list.add(ItemStack.EMPTY);
-        return list;
-    }
+        int gridX = panel.getTotalX() + SackOverlayLayout.INDEX_GRID_X + 1;
+        int gridY = panel.getTotalY() + SackOverlayLayout.INDEX_GRID_Y + 1;
+        int maxSlots = Math.min(containerSlots - 9, SackOverlayLayout.INDEX_COLS * SackOverlayLayout.INDEX_ROWS);
 
-    private static boolean isSackStack(ItemStack stack) {
-        return !stack.isEmpty() && SackKey.fromIndexItem(stack).isPresent();
-    }
-
-    /** Adds a copy of the sack item into the stash (at preferred slot if free, otherwise first free). */
-    private boolean addToStash(ItemStack stack, int preferred) {
-        if (!isSackStack(stack)) return false;
-        List<ItemStack> list = stashCopy();
-        for (ItemStack s : list) {
-            if (!s.isEmpty() && s.getHoverName().getString().equals(stack.getHoverName().getString())) {
-                return true; // already there
-            }
+        for (int i = 0; i < maxSlots; i++) {
+            Slot slot = this.menu.slots.get(i);
+            int col = i % SackOverlayLayout.INDEX_COLS;
+            int row = i / SackOverlayLayout.INDEX_COLS;
+            setSlotX(slot, gridX + col * 18 - this.leftPos);
+            setSlotY(slot, gridY + row * 18 - this.topPos);
         }
-        int target = -1;
-        if (preferred >= 0 && preferred < list.size() && list.get(preferred).isEmpty()) {
-            target = preferred;
-        } else {
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).isEmpty()) { target = i; break; }
-            }
+    }
+
+    private boolean captureIndexSnapshot() {
+        int containerSlots = this.menu.getRowCount() * 9;
+        int maxSlots = Math.min(containerSlots - 9, SackOverlayLayout.INDEX_COLS * SackOverlayLayout.INDEX_ROWS);
+        List<ItemStack> snap = new ArrayList<>(maxSlots);
+        for (int i = 0; i < maxSlots; i++) {
+            Slot slot = this.menu.slots.get(i);
+            snap.add(slot.getItem().copy());
         }
-        if (target < 0) return false;
-        ItemStack copy = stack.copy();
-        copy.setCount(1);
-        list.set(target, copy);
-        state.setIndexSnapshot(list);
-        this.rebuildWidgets();
+        List<ItemStack> prev = state.getIndexSnapshot();
+        boolean changed = !stacksMatch(prev, snap);
+        if (changed) {
+            state.setIndexSnapshot(snap);
+        }
+        return changed;
+    }
+
+    private static boolean stacksMatch(List<ItemStack> a, List<ItemStack> b) {
+        if (a == null || b == null) return a == b;
+        if (a.size() != b.size()) return false;
+        for (int i = 0; i < a.size(); i++) {
+            if (!ItemStack.matches(a.get(i), b.get(i))) return false;
+        }
         return true;
     }
 
-    private void removeFromStash(int idx) {
-        List<ItemStack> list = stashCopy();
-        if (idx < 0 || idx >= list.size()) return;
-        list.set(idx, ItemStack.EMPTY);
-        state.setIndexSnapshot(list);
-        this.rebuildWidgets();
-    }
-
     private Optional<SackKey> indexItemAt(double mx, double my) {
-        int idx = indexSlotAt(mx, my);
+        var panel = layout.getIndexPanel();
+        if (panel == null) return Optional.empty();
+
+        int localX = (int) (mx - panel.getTotalX()) - SackOverlayLayout.INDEX_GRID_X;
+        int localY = (int) (my - panel.getTotalY()) - SackOverlayLayout.INDEX_GRID_Y;
+        if (localX < 0 || localX >= SackOverlayLayout.INDEX_COLS * 18) return Optional.empty();
+        if (localY < 0 || localY >= SackOverlayLayout.INDEX_ROWS * 18) return Optional.empty();
+
+        int col = localX / 18;
+        int row = localY / 18;
+        int idx = row * SackOverlayLayout.INDEX_COLS + col;
+
         List<ItemStack> snap = state.getIndexSnapshot();
         if (idx >= 0 && idx < snap.size()) {
             ItemStack stack = snap.get(idx);
@@ -391,6 +386,13 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
     protected void containerTick() {
         super.containerTick();
         syncSlotPositions();
+
+        if (openKey.type() == SackKey.Type.SACK_INDEX && ContainerContentTracker.hasReceived(this.menu.containerId)) {
+            boolean changed = captureIndexSnapshot();
+            if (changed) {
+                this.rebuildWidgets();
+            }
+        }
 
         // Handle pending auto-open: wait until server sends container items, then auto-click the target sack
         if (pendingAutoOpen != null && ContainerContentTracker.hasReceived(this.menu.containerId)) {
@@ -644,17 +646,17 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
         super.extractContents(guiGraphics, mouseX, mouseY, a);
 
         var indexPanel = layout.getIndexPanel();
-        if (indexPanel != null) {
-            boolean allEmpty = state.getIndexSnapshot().stream().allMatch(ItemStack::isEmpty);
+        if (indexPanel != null && openKey.type() != SackKey.Type.SACK_INDEX) {
+            boolean allEmpty = state.getIndexSnapshot().isEmpty()
+                    || state.getIndexSnapshot().stream().allMatch(ItemStack::isEmpty);
             if (allEmpty) {
-                String hint = HelpBoxLang.get("helpbox.ui.sacks.index_panel_empty", "Shift+click a sack in your inventory");
+                String hint = HelpBoxLang.get("helpbox.ui.sacks.index_panel_empty", "Sack of Sacks'ı açmak için tıkla");
                 int tw = font.width(hint);
                 guiGraphics.text(font, hint,
                         indexPanel.getTotalX() + (indexPanel.getWidth() - tw) / 2,
-                        indexPanel.getTotalY() + SackOverlayLayout.INDEX_GRID_Y + 32, 0xFF404040, false);
+                        indexPanel.getTotalY() + SackOverlayLayout.INDEX_GRID_Y + 28, 0xFF404040, false);
             }
-            if (isOverIndexPanel(mouseX, mouseY) && indexSlotAt(mouseX, mouseY) >= 0
-                    && indexItemAt(mouseX, mouseY).isPresent()) {
+            if (isOverIndexPanel(mouseX, mouseY) && mouseY < indexPanel.getTotalY() + SackOverlayLayout.INDEX_GRID_Y) {
                 guiGraphics.setTooltipForNextFrame(font,
                         List.of(Component.translatable("helpbox.ui.sacks.index_panel_open_hint")
                                 .withStyle(s -> s.withColor(0x55FF55).withItalic(false))),
@@ -763,40 +765,21 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
             return true;
         }
 
-        // Shift+left-click a sack in the player's inventory: add it to the Sack of Sacks panel
-        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && event.hasShiftDown()
-                && this.hoveredSlot != null && this.hoveredSlot.index >= this.menu.getRowCount() * 9
-                && isSackStack(this.hoveredSlot.getItem())) {
-            addToStash(this.hoveredSlot.getItem(), -1);
-            return true;
-        }
-
-        // Sack of Sacks panel (client-side stash)
-        if ((event.button() == InputConstants.MOUSE_BUTTON_LEFT || event.button() == InputConstants.MOUSE_BUTTON_RIGHT)
+        // Sack of Sacks panel (cached mode, e.g. when inside Agronomy Sack):
+        // Clicking a sack card opens that sack. Clicking empty space or header opens /sacks.
+        if (openKey.type() != SackKey.Type.SACK_INDEX
+                && event.button() == InputConstants.MOUSE_BUTTON_LEFT
+                && this.menu.getCarried().isEmpty()
                 && isOverIndexPanel(event.x(), event.y())) {
-            int idx = indexSlotAt(event.x(), event.y());
-            if (idx < 0) {
-                if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && openKey.type() != SackKey.Type.SACK_INDEX) {
-                    Minecraft mc = Minecraft.getInstance();
-                    if (mc.player != null) {
-                        state.beginNavigation();
-                        mc.player.connection.sendCommand("sacks");
-                    }
-                }
-                return true;
-            }
-            ItemStack carried = this.menu.getCarried();
-            if (!carried.isEmpty()) {
-                addToStash(carried, idx);
-                return true;
-            }
-            boolean hasItem = idx < state.getIndexSnapshot().size() && !state.getIndexSnapshot().get(idx).isEmpty();
-            if (!hasItem) return true;
-            if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT || event.hasShiftDown()) {
-                removeFromStash(idx);
-            } else {
-                indexItemAt(event.x(), event.y()).ifPresent(this::onPageCardClicked);
-            }
+            indexItemAt(event.x(), event.y()).ifPresentOrElse(
+                    this::onPageCardClicked,
+                    () -> {
+                        Minecraft mc = Minecraft.getInstance();
+                        if (mc.player != null) {
+                            state.beginNavigation();
+                            mc.player.connection.sendCommand("sacks");
+                        }
+                    });
             return true;
         }
 

@@ -1,4 +1,4 @@
-﻿{
+{
   "key.category.helpbox.helpbox": "Hypixel HelpBox",
   "key.helpbox.copy_item_name": "Copy Item Name",
   "key.helpbox.copy_item_skull": "Copy Skull / Texture Code",
@@ -250,8 +250,8 @@
   "helpbox.ui.sacks.only_official": "Only Official Sacks",
   "helpbox.ui.sacks.show_overview": "Show Overview Card",
   "helpbox.ui.sacks.index_panel": "Sack of Sacks",
-  "helpbox.ui.sacks.index_panel_empty": "Shift+click a sack in your inventory",
-  "helpbox.ui.sacks.index_panel_open_hint": "Click: open sack | Right/Shift-click: remove",
+  "helpbox.ui.sacks.index_panel_empty": "Click to open Sack of Sacks",
+  "helpbox.ui.sacks.index_panel_open_hint": "Click to manage Sacks (/sacks)",
   "helpbox.ui.sacks.show_index_panel": "Show Sack of Sacks Panel",
   "helpbox.ui.sacks.save_close": "Save & Close",
   "helpbox.ui.picker.cat_all": "All",

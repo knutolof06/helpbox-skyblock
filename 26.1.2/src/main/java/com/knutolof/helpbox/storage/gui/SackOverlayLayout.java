@@ -195,18 +195,32 @@ public class SackOverlayLayout {
 
         int titleAreaHeight = font.lineHeight + 2;
 
-        Set<SackKey> known = SackCache.getInstance().allKnown();
-        Set<SackKey> keysToDisplay = new LinkedHashSet<>();
-
-        if (known.isEmpty()) {
-            if (liveKey != null) keysToDisplay.add(SackKey.canonical(liveKey));
-            for (SackKey k : SackCache.getInstance().all().keySet()) keysToDisplay.add(SackKey.canonical(k));
-        } else {
-            for (SackKey k : known) keysToDisplay.add(SackKey.canonical(k));
-            if (liveKey != null) keysToDisplay.add(SackKey.canonical(liveKey));
+        List<ItemStack> snapshot = state.getIndexSnapshot();
+        Set<SackKey> indexSackKeys = new LinkedHashSet<>();
+        if (snapshot != null) {
+            for (ItemStack stack : snapshot) {
+                if (!stack.isEmpty()) {
+                    SackKey.fromIndexItem(stack).ifPresent(k -> indexSackKeys.add(SackKey.canonical(k)));
+                }
+            }
         }
 
+        Set<SackKey> keysToDisplay = new LinkedHashSet<>();
         SackKey canonicalLiveKey = (liveKey != null && liveKey.type() != SackKey.Type.SACK_INDEX) ? SackKey.canonical(liveKey) : null;
+        if (canonicalLiveKey != null) {
+            keysToDisplay.add(canonicalLiveKey);
+        }
+
+        if (!indexSackKeys.isEmpty()) {
+            keysToDisplay.addAll(indexSackKeys);
+        } else {
+            Set<SackKey> known = SackCache.getInstance().allKnown();
+            if (known.isEmpty()) {
+                for (SackKey k : SackCache.getInstance().all().keySet()) keysToDisplay.add(SackKey.canonical(k));
+            } else {
+                for (SackKey k : known) keysToDisplay.add(SackKey.canonical(k));
+            }
+        }
 
         List<SackKey> pageKeys = new ArrayList<>(keysToDisplay.stream()
                 .filter(k -> k.type() != SackKey.Type.SACK_INDEX)
@@ -447,19 +461,20 @@ public class SackOverlayLayout {
             title.setDrawShadow(false);
             panel.addComponent(title);
 
-            // User-managed stash: only sacks that were added to the panel are shown.
-            List<ItemStack> snapshot = state.getIndexSnapshot();
-            int max = Math.min(snapshot.size(), INDEX_COLS * INDEX_ROWS);
-            for (int i = 0; i < max; i++) {
-                ItemStack stack = snapshot.get(i);
-                if (stack.isEmpty()) continue;
-                TooltipItemComponent item = new TooltipItemComponent(
-                        INDEX_GRID_X + (i % INDEX_COLS) * SLOT_SIZE + 1,
-                        INDEX_GRID_Y + (i / INDEX_COLS) * SLOT_SIZE + 1,
-                        stack, true);
-                item.setTooltipEnabled(SackConfig.showItemTooltipsOnCachedSackItems);
-                item.updateParentPosition(panel.getTotalX(), panel.getTotalY(), panel.getWidth(), panel.getHeight());
-                panel.addComponent(item);
+            boolean indexLive = liveKey != null && liveKey.type() == SackKey.Type.SACK_INDEX;
+            if (!indexLive && snapshot != null) {
+                int max = Math.min(snapshot.size(), INDEX_COLS * INDEX_ROWS);
+                for (int i = 0; i < max; i++) {
+                    ItemStack stack = snapshot.get(i);
+                    if (stack.isEmpty()) continue;
+                    TooltipItemComponent item = new TooltipItemComponent(
+                            INDEX_GRID_X + (i % INDEX_COLS) * SLOT_SIZE + 1,
+                            INDEX_GRID_Y + (i / INDEX_COLS) * SLOT_SIZE + 1,
+                            stack, true);
+                    item.setTooltipEnabled(SackConfig.showItemTooltipsOnCachedSackItems);
+                    item.updateParentPosition(panel.getTotalX(), panel.getTotalY(), panel.getWidth(), panel.getHeight());
+                    panel.addComponent(item);
+                }
             }
         }
 
