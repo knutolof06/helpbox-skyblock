@@ -89,4 +89,12 @@ public class SackOverlayState {
     public boolean isSearching() {
         return searchQuery != null && !searchQuery.isBlank();
     }
+
+    public java.util.List<net.minecraft.world.item.ItemStack> getIndexSnapshot() {
+        return com.knutolof.helpbox.storage.storage.SackCache.getInstance().getIndexSnapshot();
+    }
+
+    public void setIndexSnapshot(java.util.List<net.minecraft.world.item.ItemStack> items) {
+        com.knutolof.helpbox.storage.storage.SackCache.getInstance().setIndexSnapshot(items);
+    }
 }

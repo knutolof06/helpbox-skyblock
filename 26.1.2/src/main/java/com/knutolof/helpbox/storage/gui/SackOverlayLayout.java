@@ -14,6 +14,7 @@ import com.knutolof.helpbox.storage.config.SackConfig;
 import com.knutolof.helpbox.storage.gui.component.IconButtonComponent;
 import com.knutolof.helpbox.storage.gui.component.ItemButtonComponent;
 import com.knutolof.helpbox.storage.gui.component.SackCardComponent;
+import com.knutolof.helpbox.storage.gui.component.TooltipItemComponent;
 import com.knutolof.helpbox.storage.storage.SackCache;
 import com.knutolof.helpbox.storage.storage.SackKey;
 import com.knutolof.helpbox.storage.util.ItemSearch;
@@ -43,6 +44,14 @@ public class SackOverlayLayout {
     public static final int SCROLLBAR_GAP = 4;
     public static final int UNCACHED_CARD_HEIGHT = 50;
 
+    /** Bottom-left "Sack of Sacks" panel geometry (panel-local). */
+    public static final int INDEX_PANEL_WIDTH = 176;
+    public static final int INDEX_PANEL_HEIGHT = 96;
+    public static final int INDEX_GRID_X = 7;
+    public static final int INDEX_GRID_Y = 15;
+    public static final int INDEX_COLS = 9;
+    public static final int INDEX_ROWS = 4;
+
     private final List<SackCardComponent> sackCards = new ArrayList<>();
     private int mainBackgroundX;
     private int mainBackgroundY;
@@ -51,6 +60,7 @@ public class SackOverlayLayout {
     private SackCardComponent openCard;
     private int openCardAccumulatedY = 0;
     private SpriteComponent inventoryPanel;
+    private @Nullable SpriteComponent indexPanel;
     private ScrollContainerWidget pageOverview;
     private EditBoxWidget searchBox;
     private IconButtonComponent settingsButton;
@@ -58,6 +68,10 @@ public class SackOverlayLayout {
     private ItemButtonComponent insertInventoryButton;
     private int @Nullable [] insertInventoryButtonBounds;
     private int @Nullable [] fetchButtonBounds;
+
+    public @Nullable SpriteComponent getIndexPanel() {
+        return indexPanel;
+    }
 
     public int @Nullable [] getFetchButtonBounds() {
         return fetchButtonBounds;
@@ -408,9 +422,49 @@ public class SackOverlayLayout {
         int inventoryX = (width / 2) - (inventoryWidth / 2);
         int inventoryY = mainBackgroundY + mainBackgroundHeight;
 
+        boolean showIndexPanel = SackConfig.showSackIndexPanel;
+        int indexPanelX = inventoryX - INDEX_PANEL_WIDTH;
+        if (showIndexPanel && indexPanelX < mainBackgroundX) {
+            int blockX = mainBackgroundX + mainBackgroundWidth / 2 - (inventoryWidth + INDEX_PANEL_WIDTH) / 2;
+            indexPanelX = blockX;
+            inventoryX = blockX + INDEX_PANEL_WIDTH;
+        }
+
         SpriteComponent inventory = new SpriteComponent(inventoryX, inventoryY, inventoryWidth, inventoryHeight, getInventoryTexture());
         screen.addComponent(inventory);
         this.inventoryPanel = inventory;
+
+        this.indexPanel = null;
+        if (showIndexPanel) {
+            SpriteComponent panel = new SpriteComponent(indexPanelX, inventoryY, INDEX_PANEL_WIDTH, INDEX_PANEL_HEIGHT, getMainBackgroundTexture());
+            screen.addComponent(panel);
+            this.indexPanel = panel;
+
+            boolean indexLive = liveKey != null && liveKey.type() == SackKey.Type.SACK_INDEX;
+            TextComponent title = new TextComponent(INDEX_GRID_X, 4,
+                    Component.translatable("helpbox.ui.sacks.index_panel"),
+                    indexLive ? 0xFFFFD24A : getTitleTextColor());
+            title.updateParentPosition(panel.getTotalX(), panel.getTotalY(), panel.getWidth(), panel.getHeight());
+            title.setDrawShadow(shouldDrawTitleShadow());
+            panel.addComponent(title);
+
+            // While inside a specific sack, show the last known Sack of Sacks contents (read-only).
+            if (!indexLive) {
+                List<ItemStack> snapshot = state.getIndexSnapshot();
+                int max = Math.min(snapshot.size(), INDEX_COLS * INDEX_ROWS);
+                for (int i = 0; i < max; i++) {
+                    ItemStack stack = snapshot.get(i);
+                    if (stack.isEmpty()) continue;
+                    TooltipItemComponent item = new TooltipItemComponent(
+                            INDEX_GRID_X + (i % INDEX_COLS) * SLOT_SIZE + 1,
+                            INDEX_GRID_Y + (i / INDEX_COLS) * SLOT_SIZE + 1,
+                            stack, true);
+                    item.setTooltipEnabled(SackConfig.showItemTooltipsOnCachedSackItems);
+                    item.updateParentPosition(panel.getTotalX(), panel.getTotalY(), panel.getWidth(), panel.getHeight());
+                    panel.addComponent(item);
+                }
+            }
+        }
 
 
 

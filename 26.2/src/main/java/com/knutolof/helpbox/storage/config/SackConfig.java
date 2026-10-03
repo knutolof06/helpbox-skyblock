@@ -17,6 +17,9 @@ public class SackConfig extends MidnightConfig {
     public static boolean showSackOverviewCard = true;
 
     @Entry
+    public static boolean showSackIndexPanel = true;
+
+    @Entry
     public static boolean showSackSettingsButton = true;
 
     @Entry

@@ -23,22 +23,22 @@ public abstract class ContainerScreenHighlightClipMixin {
     @Shadow
     protected int topPos;
 
-    @Inject(method = "extractSlotHighlightBack", at = @At("HEAD"))
+    @Inject(method = "extractSlotHighlightBack", at = @At("HEAD"), require = 0)
     private void helpbox$clipBackStart(GuiGraphicsExtractor graphics, CallbackInfo ci) {
         helpbox$apply(graphics);
     }
 
-    @Inject(method = "extractSlotHighlightBack", at = @At("TAIL"))
+    @Inject(method = "extractSlotHighlightBack", at = @At("TAIL"), require = 0)
     private void helpbox$clipBackEnd(GuiGraphicsExtractor graphics, CallbackInfo ci) {
         helpbox$remove(graphics);
     }
 
-    @Inject(method = "extractSlotHighlightFront", at = @At("HEAD"))
+    @Inject(method = "extractSlotHighlightFront", at = @At("HEAD"), require = 0)
     private void helpbox$clipFrontStart(GuiGraphicsExtractor graphics, CallbackInfo ci) {
         helpbox$apply(graphics);
     }
 
-    @Inject(method = "extractSlotHighlightFront", at = @At("TAIL"))
+    @Inject(method = "extractSlotHighlightFront", at = @At("TAIL"), require = 0)
     private void helpbox$clipFrontEnd(GuiGraphicsExtractor graphics, CallbackInfo ci) {
         helpbox$remove(graphics);
     }

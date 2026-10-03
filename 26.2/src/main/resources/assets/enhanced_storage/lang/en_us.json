@@ -59,6 +59,8 @@
   "enhanced_storage_sacks.midnightconfig.enableSackOverlay.tooltip": "Toggle the unified Sack overlay on or off.",
   "enhanced_storage_sacks.midnightconfig.showSackOverviewCard": "Show Sack Overview Card",
   "enhanced_storage_sacks.midnightconfig.showSackOverviewCard.tooltip": "Display the Sack overview card beside the inventory.",
+  "enhanced_storage_sacks.midnightconfig.showSackIndexPanel": "Show Sack of Sacks Panel",
+  "enhanced_storage_sacks.midnightconfig.showSackIndexPanel.tooltip": "Display the flat Sack of Sacks container panel beside the player inventory to deposit or withdraw sacks.",
   "enhanced_storage_sacks.midnightconfig.showSackSettingsButton": "Show Settings Button",
   "enhanced_storage_sacks.midnightconfig.showSackSettingsButton.tooltip": "Show the Settings button beside the inventory panel.",
   "enhanced_storage_sacks.midnightconfig.showSackThemeButton": "Show Theme Button",

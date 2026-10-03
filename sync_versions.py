@@ -41,6 +41,13 @@ for dest_dir in DEST_DIRS:
     shutil.copytree(src_lang, dest_lang)
     print(f"Copied lang package -> {dest_lang}")
 
+    src_es_lang = os.path.join(SRC_DIR, "src/main/resources/assets/enhanced_storage/lang")
+    dest_es_lang = os.path.join(dest_dir, "src/main/resources/assets/enhanced_storage/lang")
+    if os.path.exists(dest_es_lang):
+        shutil.rmtree(dest_es_lang)
+    shutil.copytree(src_es_lang, dest_es_lang)
+    print(f"Copied enhanced_storage lang package -> {dest_es_lang}")
+
     # 4. Specific files to sync
     files = [
         "src/main/java/com/knutolof/helpbox/HelpBoxMod.java",

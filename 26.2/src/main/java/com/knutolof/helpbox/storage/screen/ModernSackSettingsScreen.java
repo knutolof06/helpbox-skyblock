@@ -38,7 +38,7 @@ public class ModernSackSettingsScreen extends Screen {
         graphics.fill(0, 0, this.width, this.height, 0x99000000);
 
         int cardW = 340;
-        int cardH = 280;
+        int cardH = 308;
         int cardX = (this.width - cardW) / 2;
         int cardY = (this.height - cardH) / 2;
 
@@ -128,6 +128,11 @@ public class ModernSackSettingsScreen extends Screen {
         ModernUiRenderHelper.drawModernToggle(graphics, this.font, cardX + 16, row7Y, SackConfig.showSackOverviewCard, tog3Hov);
         graphics.text(this.font, HelpBoxLang.get("helpbox.ui.sacks.show_overview", "Genel Bakış Kartını Göster"), cardX + 62, row7Y + 4, COLOR_TEXT_PRIMARY, false);
 
+        int row8Y = cardY + 226;
+        boolean tog4Hov = inRect(mouseX, mouseY, cardX + 16, row8Y, 40, 18);
+        ModernUiRenderHelper.drawModernToggle(graphics, this.font, cardX + 16, row8Y, SackConfig.showSackIndexPanel, tog4Hov);
+        graphics.text(this.font, HelpBoxLang.get("helpbox.ui.sacks.show_index_panel", "Sack of Sacks Panelini Göster"), cardX + 62, row8Y + 4, COLOR_TEXT_PRIMARY, false);
+
         // Save & Close Button
         int saveBtnY = cardY + cardH - 34;
         boolean saveHov = inRect(mouseX, mouseY, cardX + 16, saveBtnY, cardW - 32, 22);
@@ -139,7 +144,7 @@ public class ModernSackSettingsScreen extends Screen {
         if (event.button() != InputConstants.MOUSE_BUTTON_LEFT) return super.mouseClicked(event, doubleClick);
 
         int cardW = 340;
-        int cardH = 280;
+        int cardH = 308;
         int cardX = (this.width - cardW) / 2;
         int cardY = (this.height - cardH) / 2;
 
@@ -211,6 +216,13 @@ public class ModernSackSettingsScreen extends Screen {
         int row7Y = cardY + 202;
         if (inRect(event.x(), event.y(), cardX + 16, row7Y, 40, 18)) {
             SackConfig.showSackOverviewCard = !SackConfig.showSackOverviewCard;
+            return true;
+        }
+
+        // Toggle 4: showSackIndexPanel
+        int row8Y = cardY + 226;
+        if (inRect(event.x(), event.y(), cardX + 16, row8Y, 40, 18)) {
+            SackConfig.showSackIndexPanel = !SackConfig.showSackIndexPanel;
             return true;
         }
 

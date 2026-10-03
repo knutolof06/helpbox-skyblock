@@ -26,6 +26,7 @@ public final class SackCache {
     private final Map<SackKey, CachedSackPage> pages = new ConcurrentHashMap<>();
     private final Set<SackKey> knownPages = ConcurrentHashMap.newKeySet();
     private final List<String> customOrder = new ArrayList<>();
+    private final List<ItemStack> indexSnapshot = new ArrayList<>();
     private final Object ioLock = new Object();
     private boolean dirty = false;
 
@@ -34,6 +35,29 @@ public final class SackCache {
 
     public static SackCache getInstance() {
         return INSTANCE;
+    }
+
+    public List<ItemStack> getIndexSnapshot() {
+        return Collections.unmodifiableList(indexSnapshot);
+    }
+
+    public void setIndexSnapshot(List<ItemStack> items) {
+        if (items == null) return;
+        if (itemsMatch(this.indexSnapshot, items)) return;
+        this.indexSnapshot.clear();
+        for (ItemStack s : items) {
+            this.indexSnapshot.add(s.copy());
+        }
+        dirty = true;
+        saveToDisk();
+    }
+
+    private static boolean itemsMatch(List<ItemStack> a, List<ItemStack> b) {
+        if (a.size() != b.size()) return false;
+        for (int i = 0; i < a.size(); i++) {
+            if (!ItemStack.matches(a.get(i), b.get(i))) return false;
+        }
+        return true;
     }
 
     private static Path cacheFile() {
@@ -209,6 +233,15 @@ public final class SackCache {
         }
         root.put("customOrder", orderTag);
 
+        ListTag indexSnapTag = new ListTag();
+        for (ItemStack stack : indexSnapshot) {
+            ItemStack.OPTIONAL_CODEC.encodeStart(ops, stack)
+                    .resultOrPartial(err ->
+                            StorageInitializer.LOGGER.warn("Failed to encode sack index stack: {}", err))
+                    .ifPresent(indexSnapTag::add);
+        }
+        root.put("indexSnapshot", indexSnapTag);
+
         pages.forEach((key, page) -> {
             ListTag list = new ListTag();
             for (ItemStack stack : page.items()) {
@@ -287,9 +320,19 @@ public final class SackCache {
             }
         });
 
+        indexSnapshot.clear();
+        root.getList("indexSnapshot").ifPresent(list -> {
+            for (Tag tag : list) {
+                indexSnapshot.add(ItemStack.OPTIONAL_CODEC.parse(ops, tag)
+                        .resultOrPartial(err ->
+                                StorageInitializer.LOGGER.warn("Failed to decode sack index stack: {}", err))
+                        .orElse(ItemStack.EMPTY));
+            }
+        });
+
         int loaded = 0;
         for (String id : root.keySet()) {
-            if (id.equals("known")) continue;
+            if (id.equals("known") || id.equals("customOrder") || id.equals("indexSnapshot")) continue;
 
             Optional<SackKey> keyOpt = SackKey.fromId(id);
             if (keyOpt.isEmpty()) continue;
@@ -339,6 +382,7 @@ public final class SackCache {
     public void reloadForCurrentProfile() {
         pages.clear();
         knownPages.clear();
+        indexSnapshot.clear();
         dirty = false;
         loadFromDisk();
     }
