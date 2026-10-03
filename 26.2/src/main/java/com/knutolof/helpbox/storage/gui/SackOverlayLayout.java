@@ -68,6 +68,7 @@ public class SackOverlayLayout {
     private ItemButtonComponent insertInventoryButton;
     private int @Nullable [] insertInventoryButtonBounds;
     private int @Nullable [] fetchButtonBounds;
+    private int @Nullable [] profileButtonBounds;
 
     public @Nullable EmptyComponent getIndexPanel() {
         return indexPanel;
@@ -79,6 +80,10 @@ public class SackOverlayLayout {
 
     public int @Nullable [] getInsertInventoryButtonBounds() {
         return insertInventoryButtonBounds;
+    }
+
+    public int @Nullable [] getProfileButtonBounds() {
+        return profileButtonBounds;
     }
 
     public static void cycleTheme() {
@@ -192,6 +197,7 @@ public class SackOverlayLayout {
         this.insertInventoryButton = null;
         this.insertInventoryButtonBounds = null;
         this.fetchButtonBounds = null;
+        this.profileButtonBounds = null;
 
         int titleAreaHeight = font.lineHeight + 2;
 
@@ -529,6 +535,12 @@ public class SackOverlayLayout {
             screen.addComponent(insertInv);
             this.insertInventoryButton = insertInv;
             this.insertInventoryButtonBounds = new int[]{btnX, btnY, btnSize, btnSize};
+            btnX += btnSize + btnGap;
         }
+
+        String curProf = com.knutolof.helpbox.storage.storage.StorageProfile.getInstance().current().orElse("default");
+        String profLabel = "👤 " + curProf;
+        int profBtnWidth = Math.max(btnSize, font.width(profLabel) + 12);
+        this.profileButtonBounds = new int[]{btnX, btnY, profBtnWidth, btnSize};
     }
 }

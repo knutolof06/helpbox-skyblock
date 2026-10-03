@@ -19,6 +19,7 @@ public final class StorageProfile {
     private static final StorageProfile INSTANCE = new StorageProfile();
     private volatile String currentProfileId = "default";
     private volatile boolean confirmed = true;
+    private Runnable beforeChange;
     private Runnable onChange;
 
     private StorageProfile() {
@@ -40,7 +41,7 @@ public final class StorageProfile {
         if (!Files.exists(file)) return Optional.empty();
         try {
             String s = Files.readString(file).strip();
-            return s.isBlank() ? Optional.empty() : Optional.of(s);
+            return s.isBlank() ? Optional.empty() : Optional.of(sanitizeProfileName(s));
         } catch (IOException e) {
             StorageInitializer.LOGGER.error("Failed to read last profile pointer", e);
             return Optional.empty();
@@ -59,6 +60,12 @@ public final class StorageProfile {
         }
     }
 
+    public static String sanitizeProfileName(String name) {
+        if (name == null || name.isBlank()) return "default";
+        String clean = name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+        return clean.isBlank() ? "default" : clean;
+    }
+
     public Optional<String> current() {
         if (currentProfileId == null || currentProfileId.isBlank()) {
             currentProfileId = readPersistedProfile().orElse("default");
@@ -74,6 +81,10 @@ public final class StorageProfile {
         this.confirmed = true;
     }
 
+    public void setBeforeChange(Runnable beforeChange) {
+        this.beforeChange = beforeChange;
+    }
+
     public void setOnChange(Runnable onChange) {
         this.onChange = onChange;
     }
@@ -83,13 +94,36 @@ public final class StorageProfile {
         this.confirmed = true;
     }
 
+    public java.util.List<String> getKnownProfiles() {
+        java.util.Set<String> set = new java.util.LinkedHashSet<>();
+        current().ifPresent(set::add);
+        set.add("default");
+        Path profilesDir = FabricLoader.getInstance().getConfigDir()
+                .resolve(StorageInitializer.MOD_ID)
+                .resolve("profiles");
+        if (Files.exists(profilesDir)) {
+            try (var stream = Files.list(profilesDir)) {
+                stream.filter(Files::isDirectory)
+                        .map(p -> p.getFileName().toString())
+                        .filter(s -> !s.isBlank())
+                        .forEach(set::add);
+            } catch (IOException ignored) {}
+        }
+        return new java.util.ArrayList<>(set);
+    }
+
     public void onProfileIdSeen(String profileId) {
         if (profileId == null || profileId.isBlank()) return;
+        String sanitized = sanitizeProfileName(profileId);
         this.confirmed = true;
-        if (profileId.equals(currentProfileId)) return;
+        if (sanitized.equalsIgnoreCase(currentProfileId)) return;
 
-        this.currentProfileId = profileId;
-        persistProfile(profileId);
+        if (beforeChange != null) {
+            beforeChange.run();
+        }
+
+        this.currentProfileId = sanitized;
+        persistProfile(sanitized);
 
         if (onChange != null) {
             onChange.run();

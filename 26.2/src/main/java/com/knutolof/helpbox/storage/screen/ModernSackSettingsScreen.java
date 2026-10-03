@@ -38,7 +38,7 @@ public class ModernSackSettingsScreen extends Screen {
         graphics.fill(0, 0, this.width, this.height, 0x99000000);
 
         int cardW = 340;
-        int cardH = 308;
+        int cardH = 340;
         int cardX = (this.width - cardW) / 2;
         int cardY = (this.height - cardH) / 2;
 
@@ -133,6 +133,24 @@ public class ModernSackSettingsScreen extends Screen {
         ModernUiRenderHelper.drawModernToggle(graphics, this.font, cardX + 16, row8Y, SackConfig.showSackIndexPanel, tog4Hov);
         graphics.text(this.font, HelpBoxLang.get("helpbox.ui.sacks.show_index_panel", "Sack of Sacks Panelini Göster"), cardX + 62, row8Y + 4, COLOR_TEXT_PRIMARY, false);
 
+        // Option 9: SkyBlock Profili
+        int row9Y = cardY + 252;
+        String curProf = com.knutolof.helpbox.storage.storage.StorageProfile.getInstance().current().orElse("default");
+        graphics.text(this.font, HelpBoxLang.get("helpbox.ui.sacks.active_profile", "SkyBlock Profili:"), cardX + 16, row9Y + 4, COLOR_TEXT_PRIMARY, false);
+
+        java.util.List<String> knownProfiles = com.knutolof.helpbox.storage.storage.StorageProfile.getInstance().getKnownProfiles();
+        int pBtnX = cardX + cardW - 16;
+        int maxProfiles = Math.min(knownProfiles.size(), 4);
+        for (int i = maxProfiles - 1; i >= 0; i--) {
+            String pName = knownProfiles.get(i);
+            int bw = Math.max(38, this.font.width(pName) + 10);
+            pBtnX -= bw;
+            boolean active = curProf.equalsIgnoreCase(pName);
+            boolean hov = inRect(mouseX, mouseY, pBtnX, row9Y, bw - 4, 18);
+            ModernUiRenderHelper.drawPillButton(graphics, this.font, pBtnX, row9Y, bw - 4, 18, pName, COLOR_ACCENT, hov, active);
+            pBtnX -= 4;
+        }
+
         // Save & Close Button
         int saveBtnY = cardY + cardH - 34;
         boolean saveHov = inRect(mouseX, mouseY, cardX + 16, saveBtnY, cardW - 32, 22);
@@ -144,7 +162,7 @@ public class ModernSackSettingsScreen extends Screen {
         if (event.button() != InputConstants.MOUSE_BUTTON_LEFT) return super.mouseClicked(event, doubleClick);
 
         int cardW = 340;
-        int cardH = 308;
+        int cardH = 340;
         int cardX = (this.width - cardW) / 2;
         int cardY = (this.height - cardH) / 2;
 
@@ -224,6 +242,26 @@ public class ModernSackSettingsScreen extends Screen {
         if (inRect(event.x(), event.y(), cardX + 16, row8Y, 40, 18)) {
             SackConfig.showSackIndexPanel = !SackConfig.showSackIndexPanel;
             return true;
+        }
+
+        // Profile buttons click
+        int row9Y = cardY + 252;
+        java.util.List<String> knownProfiles = com.knutolof.helpbox.storage.storage.StorageProfile.getInstance().getKnownProfiles();
+        int maxProfiles = Math.min(knownProfiles.size(), 4);
+        int pBtnX = cardX + cardW - 16;
+        for (int i = maxProfiles - 1; i >= 0; i--) {
+            String pName = knownProfiles.get(i);
+            int bw = Math.max(38, this.font.width(pName) + 10);
+            pBtnX -= bw;
+            if (inRect(event.x(), event.y(), pBtnX, row9Y, bw - 4, 18)) {
+                com.knutolof.helpbox.storage.storage.StorageProfile.getInstance().onProfileIdSeen(pName);
+                if (this.minecraft != null && this.minecraft.player != null) {
+                    this.minecraft.player.sendSystemMessage(
+                            Component.translatable("helpbox.ui.sacks.profile_switched", pName));
+                }
+                return true;
+            }
+            pBtnX -= 4;
         }
 
         // Save & Close button

@@ -3,6 +3,7 @@ package com.knutolof.helpbox.storage;
 import com.knutolof.helpbox.storage.config.EnhancedStorageConfig;
 import com.knutolof.helpbox.storage.config.SackConfig;
 import com.knutolof.helpbox.storage.gui.StorageOverlay;
+import com.knutolof.helpbox.storage.screen.SackContainerScreen;
 import com.knutolof.helpbox.storage.screen.StorageContainerScreen;
 import com.knutolof.helpbox.storage.storage.*;
 import eu.midnightdust.lib.config.MidnightConfig;
@@ -26,21 +27,31 @@ public class StorageInitializer {
         MidnightConfig.init(MOD_ID, EnhancedStorageConfig.class);
         MidnightConfig.init(SACK_MOD_ID, SackConfig.class);
 
+        StorageProfile.getInstance().setBeforeChange(() -> {
+            StorageCache.getInstance().saveToDisk();
+            SackCache.getInstance().saveToDisk();
+            StorageNames.getInstance().saveToDisk();
+            StorageOrder.getInstance().saveToDisk();
+        });
+
         StorageProfile.getInstance().setOnChange(() -> {
             StorageCache.getInstance().reloadForCurrentProfile();
             SackCache.getInstance().reloadForCurrentProfile();
             StorageNames.getInstance().reloadForCurrentProfile();
             StorageOrder.getInstance().reloadForCurrentProfile();
 
-            // If a storage overlay is currently open, rebuild it against the new data.
+            // If a storage or sack overlay is currently open, rebuild it against the new data.
             Minecraft mc = Minecraft.getInstance();
             mc.execute(() -> {
                 if (getCurrentScreen() instanceof StorageContainerScreen storageScreen) {
                     storageScreen.rebuildForProfileChange();
                 }
+                if (getCurrentScreen() instanceof SackContainerScreen sackScreen) {
+                    sackScreen.rebuildForProfileChange();
+                }
             });
 
-            LOGGER.info("Storage profile changed; caches reloaded.");
+            LOGGER.info("Storage profile changed to {}; caches reloaded.", StorageProfile.getInstance().current().orElse("default"));
         });
 
         StorageCaptureHandler.register();

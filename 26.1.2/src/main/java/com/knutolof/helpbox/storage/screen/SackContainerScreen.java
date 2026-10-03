@@ -13,6 +13,8 @@ import com.knutolof.helpbox.storage.gui.component.SackCardComponent;
 import com.knutolof.helpbox.storage.storage.ContainerContentTracker;
 import com.knutolof.helpbox.storage.storage.SackCache;
 import com.knutolof.helpbox.storage.storage.SackKey;
+import com.knutolof.helpbox.storage.storage.StorageCaptureHandler;
+import com.knutolof.helpbox.storage.storage.StorageProfile;
 import com.knutolof.helpbox.storage.util.TextUtils;
 import com.knutolof.helpbox.ui.ModernUiRenderHelper;
 import com.knutolof.helpbox.util.HelpBoxLang;
@@ -96,6 +98,7 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
 
     @Override
     protected void init() {
+        StorageCaptureHandler.checkScoreboardProfile(Minecraft.getInstance());
         SackCache.getInstance().pruneInvalidPages();
         super.init();
 
@@ -405,6 +408,9 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
     @Override
     protected void containerTick() {
         super.containerTick();
+        if (this.minecraft != null && this.minecraft.player != null && this.minecraft.player.tickCount % 20 == 0) {
+            StorageCaptureHandler.checkScoreboardProfile(this.minecraft);
+        }
         syncSlotPositions();
 
         if (openKey.type() == SackKey.Type.SACK_INDEX && ContainerContentTracker.hasReceived(this.menu.containerId)) {
@@ -509,6 +515,10 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
         // Use /sacks command to safely return to index without picking up items onto the cursor
         state.beginNavigation();
         mc.player.connection.sendCommand("sacks");
+    }
+
+    public void rebuildForProfileChange() {
+        this.rebuildWidgets();
     }
 
     public void scrollLiveCardIntoView() {
@@ -698,6 +708,19 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
             ModernUiRenderHelper.drawPillButton(guiGraphics, font, fb[0], fb[1], fb[2], fb[3], HelpBoxLang.get("helpbox.ui.sacks.btn_fetch", "🔄 Sacks Verilerini Getir"), 0xFF38BDF8, hovered, false);
         }
 
+        int[] pb = layout.getProfileButtonBounds();
+        if (pb != null) {
+            String curProf = com.knutolof.helpbox.storage.storage.StorageProfile.getInstance().current().orElse("default");
+            boolean hovered = inRect(mouseX, mouseY, pb[0], pb[1], pb[2], pb[3]);
+            ModernUiRenderHelper.drawPillButton(guiGraphics, font, pb[0], pb[1], pb[2], pb[3], "👤 " + curProf, 0xFF38BDF8, hovered, false);
+            if (hovered) {
+                guiGraphics.setTooltipForNextFrame(font,
+                        List.of(Component.translatable("helpbox.ui.sacks.profile_tooltip", curProf)
+                                .withStyle(s -> s.withColor(0x38BDF8).withItalic(false))),
+                        Optional.empty(), mouseX, mouseY);
+            }
+        }
+
         // Real-time Drag Preview & Target Highlight
         if (isDraggingCard && draggedCardKey != null) {
             SackCardComponent targetCard = cardAt(mouseX, mouseY);
@@ -790,6 +813,13 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
         if (iib != null && event.button() == InputConstants.MOUSE_BUTTON_LEFT
                 && inRect(event.x(), event.y(), iib[0], iib[1], iib[2], iib[3])) {
             onInsertInventoryClicked();
+            return true;
+        }
+
+        int[] pb = layout.getProfileButtonBounds();
+        if (pb != null && event.button() == InputConstants.MOUSE_BUTTON_LEFT
+                && inRect(event.x(), event.y(), pb[0], pb[1], pb[2], pb[3])) {
+            onSettingsClicked();
             return true;
         }
 

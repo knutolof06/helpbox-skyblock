@@ -12,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -31,15 +32,81 @@ import java.util.stream.Collectors;
 public final class StorageCaptureHandler {
 
     private static final int PLAYER_SLOT_COUNT = 36;
-    private static final Pattern PROFILE_ID_PATTERN = Pattern.compile("profile id:\\s*([0-9a-f-]{36})");
+    private static final Pattern PROFILE_ID_PATTERN = Pattern.compile("profile id:\\s*([0-9a-f-]{36})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern LOCRAW_PROFILE_PATTERN = Pattern.compile("\"profile_id\"\\s*:\\s*\"([0-9a-f-]{36})\"", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CHAT_PROFILE_PATTERN = Pattern.compile("(?:Switching to (?:profile )?|You are currently playing on (?:profile:? )?|Your active profile is now:?\\s*|Playing on Profile:?\\s*)([A-Za-z0-9_]+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern SCOREBOARD_PROFILE_PATTERN = Pattern.compile("(?:Profile|Profil):\\s*(?:[^A-Za-z0-9_]*\\s*)?([A-Za-z0-9_]+)", Pattern.CASE_INSENSITIVE);
     private static final int INDEX_STABLE_TICKS = 10;
+
+    public static Optional<String> detectProfileFromScoreboard(Minecraft client) {
+        if (client == null || client.level == null) return Optional.empty();
+        net.minecraft.world.scores.Scoreboard scoreboard = client.level.getScoreboard();
+        net.minecraft.world.scores.Objective objective = scoreboard.getDisplayObjective(net.minecraft.world.scores.DisplaySlot.SIDEBAR);
+        if (objective == null) return Optional.empty();
+
+        for (net.minecraft.world.scores.PlayerScoreEntry score : scoreboard.listPlayerScores(objective)) {
+            String owner = score.owner();
+            net.minecraft.world.scores.PlayerTeam team = scoreboard.getPlayersTeam(owner);
+            String line;
+            if (team != null) {
+                line = TextUtils.stripText(team.getPlayerPrefix()) + owner + TextUtils.stripText(team.getPlayerSuffix());
+            } else {
+                line = owner;
+            }
+            Matcher m = SCOREBOARD_PROFILE_PATTERN.matcher(line);
+            if (m.find()) {
+                String prof = m.group(1).trim();
+                if (!prof.equalsIgnoreCase("none") && !prof.equalsIgnoreCase("unknown")) {
+                    return Optional.of(prof);
+                }
+            }
+        }
+        return Optional.empty();
+    }
 
     private StorageCaptureHandler() {
     }
 
+    public static void checkScoreboardProfile(Minecraft client) {
+        detectProfileFromScoreboard(client).ifPresent(profName -> {
+            StorageProfile profile = StorageProfile.getInstance();
+            if (!profile.current().filter(profName::equalsIgnoreCase).isPresent()) {
+                profile.onProfileIdSeen(profName);
+            }
+        });
+    }
+
     public static void register() {
         ScreenEvents.AFTER_INIT.register((Minecraft client, Screen screen, int scaledWidth, int scaledHeight) -> {
+            checkScoreboardProfile(client);
+
             if (!(screen instanceof AbstractContainerScreen<?> containerScreen)) return;
+
+            String title = TextUtils.stripText(containerScreen.getTitle()).toLowerCase();
+            if (title.contains("profile")) {
+                ScreenEvents.afterTick(screen).register(s -> {
+                    if (!ContainerContentTracker.hasReceived(containerScreen.getMenu().containerId)) return;
+                    for (Slot slot : containerScreen.getMenu().slots) {
+                        if (slot.getItem().isEmpty()) continue;
+                        var lore = slot.getItem().get(DataComponents.LORE);
+                        if (lore != null) {
+                            for (Component line : lore.lines()) {
+                                String l = TextUtils.stripText(line).toLowerCase();
+                                if (l.contains("currently playing") || l.contains("selected")) {
+                                    String name = TextUtils.stripText(slot.getItem().getHoverName()).trim();
+                                    if (name.toLowerCase().startsWith("profile:")) {
+                                        name = name.substring(8).trim();
+                                    }
+                                    if (!name.isBlank()) {
+                                        StorageProfile.getInstance().onProfileIdSeen(name);
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
 
             Optional<StorageKey> keyOpt = StorageKey.fromTitle(containerScreen.getTitle());
             if (keyOpt.isEmpty()) return;
@@ -80,12 +147,26 @@ public final class StorageCaptureHandler {
                     ContainerContentTracker.reset();
                     StorageProfile.getInstance().adoptLastKnownProfile();
                     StorageCache.getInstance().reloadForCurrentProfile();
+                    SackCache.getInstance().reloadForCurrentProfile();
                     StorageNames.getInstance().reloadForCurrentProfile();
                     StorageOrder.getInstance().reloadForCurrentProfile();
+
+                    // Query Hypixel locraw after 2 seconds to auto-detect profile ID
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException ignored) {}
+                        client.execute(() -> {
+                            if (client.player != null && client.player.connection != null) {
+                                client.player.connection.sendCommand("locraw");
+                            }
+                        });
+                    }, "HelpBox-ProfileDetector").start();
                 }));
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             StorageCache.getInstance().saveToDisk();
+            SackCache.getInstance().saveToDisk();
             StorageNames.getInstance().saveToDisk();
             StorageOrder.getInstance().saveToDisk();
         });
@@ -99,30 +180,27 @@ public final class StorageCaptureHandler {
     }
 
     private static void onGameMessage(net.minecraft.network.chat.Component message) {
-        Matcher m = PROFILE_ID_PATTERN.matcher(TextUtils.stripText(message));
-        if (!m.find()) return;
+        String text = TextUtils.stripText(message);
+        String newProfileId = null;
 
-        String newProfileId = m.group(1);
-        StorageProfile profile = StorageProfile.getInstance();
-
-        if (profile.current().filter(newProfileId::equals).isPresent()) {
-            if (!profile.isConfirmed()) {
-                profile.markConfirmed();
-                StorageInitializer.LOGGER.info("SkyBlock profile {} confirmed; flushing pending saves", newProfileId);
-                StorageCache.getInstance().saveToDisk();
-                StorageNames.getInstance().saveToDisk();
-                StorageOrder.getInstance().saveToDisk();
+        Matcher m = PROFILE_ID_PATTERN.matcher(text);
+        if (m.find()) {
+            newProfileId = m.group(1);
+        } else {
+            m = LOCRAW_PROFILE_PATTERN.matcher(text);
+            if (m.find()) {
+                newProfileId = m.group(1);
+            } else {
+                m = CHAT_PROFILE_PATTERN.matcher(text);
+                if (m.find()) {
+                    newProfileId = m.group(1);
+                }
             }
-            return;
         }
 
-        if (profile.isConfirmed()) {
-            StorageCache.getInstance().saveToDisk();
-            StorageNames.getInstance().saveToDisk();
-            StorageOrder.getInstance().saveToDisk();
-        }
+        if (newProfileId == null || newProfileId.isBlank()) return;
 
-        StorageInitializer.LOGGER.info("SkyBlock profile changed to {}", newProfileId);
+        StorageProfile profile = StorageProfile.getInstance();
         profile.markConfirmed();
         profile.onProfileIdSeen(newProfileId);
     }
