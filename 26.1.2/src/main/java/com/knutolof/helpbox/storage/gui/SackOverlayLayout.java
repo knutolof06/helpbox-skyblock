@@ -60,7 +60,7 @@ public class SackOverlayLayout {
     private SackCardComponent openCard;
     private int openCardAccumulatedY = 0;
     private SpriteComponent inventoryPanel;
-    private @Nullable SpriteComponent indexPanel;
+    private @Nullable EmptyComponent indexPanel;
     private ScrollContainerWidget pageOverview;
     private EditBoxWidget searchBox;
     private IconButtonComponent settingsButton;
@@ -69,7 +69,7 @@ public class SackOverlayLayout {
     private int @Nullable [] insertInventoryButtonBounds;
     private int @Nullable [] fetchButtonBounds;
 
-    public @Nullable SpriteComponent getIndexPanel() {
+    public @Nullable EmptyComponent getIndexPanel() {
         return indexPanel;
     }
 
@@ -436,33 +436,30 @@ public class SackOverlayLayout {
 
         this.indexPanel = null;
         if (showIndexPanel) {
-            SpriteComponent panel = new SpriteComponent(indexPanelX, inventoryY, INDEX_PANEL_WIDTH, INDEX_PANEL_HEIGHT, getMainBackgroundTexture());
+            EmptyComponent panel = new EmptyComponent(indexPanelX, inventoryY, INDEX_PANEL_WIDTH, INDEX_PANEL_HEIGHT);
             screen.addComponent(panel);
             this.indexPanel = panel;
 
-            boolean indexLive = liveKey != null && liveKey.type() == SackKey.Type.SACK_INDEX;
-            TextComponent title = new TextComponent(INDEX_GRID_X, 4,
+            TextComponent title = new TextComponent(INDEX_GRID_X, 5,
                     Component.translatable("helpbox.ui.sacks.index_panel"),
-                    indexLive ? 0xFFFFD24A : getTitleTextColor());
+                    0xFF404040);
             title.updateParentPosition(panel.getTotalX(), panel.getTotalY(), panel.getWidth(), panel.getHeight());
-            title.setDrawShadow(shouldDrawTitleShadow());
+            title.setDrawShadow(false);
             panel.addComponent(title);
 
-            // While inside a specific sack, show the last known Sack of Sacks contents (read-only).
-            if (!indexLive) {
-                List<ItemStack> snapshot = state.getIndexSnapshot();
-                int max = Math.min(snapshot.size(), INDEX_COLS * INDEX_ROWS);
-                for (int i = 0; i < max; i++) {
-                    ItemStack stack = snapshot.get(i);
-                    if (stack.isEmpty()) continue;
-                    TooltipItemComponent item = new TooltipItemComponent(
-                            INDEX_GRID_X + (i % INDEX_COLS) * SLOT_SIZE + 1,
-                            INDEX_GRID_Y + (i / INDEX_COLS) * SLOT_SIZE + 1,
-                            stack, true);
-                    item.setTooltipEnabled(SackConfig.showItemTooltipsOnCachedSackItems);
-                    item.updateParentPosition(panel.getTotalX(), panel.getTotalY(), panel.getWidth(), panel.getHeight());
-                    panel.addComponent(item);
-                }
+            // User-managed stash: only sacks that were added to the panel are shown.
+            List<ItemStack> snapshot = state.getIndexSnapshot();
+            int max = Math.min(snapshot.size(), INDEX_COLS * INDEX_ROWS);
+            for (int i = 0; i < max; i++) {
+                ItemStack stack = snapshot.get(i);
+                if (stack.isEmpty()) continue;
+                TooltipItemComponent item = new TooltipItemComponent(
+                        INDEX_GRID_X + (i % INDEX_COLS) * SLOT_SIZE + 1,
+                        INDEX_GRID_Y + (i / INDEX_COLS) * SLOT_SIZE + 1,
+                        stack, true);
+                item.setTooltipEnabled(SackConfig.showItemTooltipsOnCachedSackItems);
+                item.updateParentPosition(panel.getTotalX(), panel.getTotalY(), panel.getWidth(), panel.getHeight());
+                panel.addComponent(item);
             }
         }
 

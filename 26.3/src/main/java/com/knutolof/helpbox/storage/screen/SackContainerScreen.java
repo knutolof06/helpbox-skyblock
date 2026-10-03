@@ -202,47 +202,66 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
             setSlotX(slot, -9999);
             setSlotY(slot, -9999);
         }
-
-        var panel = layout.getIndexPanel();
-        if (panel == null) return;
-
-        int gridX = panel.getTotalX() + SackOverlayLayout.INDEX_GRID_X + 1;
-        int gridY = panel.getTotalY() + SackOverlayLayout.INDEX_GRID_Y + 1;
-        int maxSlots = Math.min(containerSlots - 9, SackOverlayLayout.INDEX_COLS * SackOverlayLayout.INDEX_ROWS);
-
-        for (int i = 0; i < maxSlots; i++) {
-            Slot slot = this.menu.slots.get(i);
-            int col = i % SackOverlayLayout.INDEX_COLS;
-            int row = i / SackOverlayLayout.INDEX_COLS;
-            setSlotX(slot, gridX + col * 18 - this.leftPos);
-            setSlotY(slot, gridY + row * 18 - this.topPos);
-        }
     }
 
-    private void captureIndexSnapshot() {
-        int containerSlots = this.menu.getRowCount() * 9;
-        int maxSlots = Math.min(containerSlots - 9, SackOverlayLayout.INDEX_COLS * SackOverlayLayout.INDEX_ROWS);
-        List<ItemStack> snap = new ArrayList<>();
-        for (int i = 0; i < maxSlots; i++) {
-            Slot slot = this.menu.slots.get(i);
-            snap.add(slot.getItem().copy());
+    /** Index (0..35) of the stash slot under the mouse, or -1. */
+    private int indexSlotAt(double mx, double my) {
+        var panel = layout.getIndexPanel();
+        if (panel == null) return -1;
+        int localX = (int) (mx - panel.getTotalX()) - SackOverlayLayout.INDEX_GRID_X;
+        int localY = (int) (my - panel.getTotalY()) - SackOverlayLayout.INDEX_GRID_Y;
+        if (localX < 0 || localX >= SackOverlayLayout.INDEX_COLS * 18) return -1;
+        if (localY < 0 || localY >= SackOverlayLayout.INDEX_ROWS * 18) return -1;
+        return (localY / 18) * SackOverlayLayout.INDEX_COLS + (localX / 18);
+    }
+
+    private List<ItemStack> stashCopy() {
+        int total = SackOverlayLayout.INDEX_COLS * SackOverlayLayout.INDEX_ROWS;
+        List<ItemStack> list = new ArrayList<>(state.getIndexSnapshot());
+        while (list.size() < total) list.add(ItemStack.EMPTY);
+        return list;
+    }
+
+    private static boolean isSackStack(ItemStack stack) {
+        return !stack.isEmpty() && SackKey.fromIndexItem(stack).isPresent();
+    }
+
+    /** Adds a copy of the sack item into the stash (at preferred slot if free, otherwise first free). */
+    private boolean addToStash(ItemStack stack, int preferred) {
+        if (!isSackStack(stack)) return false;
+        List<ItemStack> list = stashCopy();
+        for (ItemStack s : list) {
+            if (!s.isEmpty() && s.getHoverName().getString().equals(stack.getHoverName().getString())) {
+                return true; // already there
+            }
         }
-        state.setIndexSnapshot(snap);
+        int target = -1;
+        if (preferred >= 0 && preferred < list.size() && list.get(preferred).isEmpty()) {
+            target = preferred;
+        } else {
+            for (int i = 0; i < list.size(); i++) {
+                if (list.get(i).isEmpty()) { target = i; break; }
+            }
+        }
+        if (target < 0) return false;
+        ItemStack copy = stack.copy();
+        copy.setCount(1);
+        list.set(target, copy);
+        state.setIndexSnapshot(list);
+        this.rebuildWidgets();
+        return true;
+    }
+
+    private void removeFromStash(int idx) {
+        List<ItemStack> list = stashCopy();
+        if (idx < 0 || idx >= list.size()) return;
+        list.set(idx, ItemStack.EMPTY);
+        state.setIndexSnapshot(list);
+        this.rebuildWidgets();
     }
 
     private Optional<SackKey> indexItemAt(double mx, double my) {
-        var panel = layout.getIndexPanel();
-        if (panel == null) return Optional.empty();
-
-        int localX = (int) (mx - panel.getTotalX()) - SackOverlayLayout.INDEX_GRID_X;
-        int localY = (int) (my - panel.getTotalY()) - SackOverlayLayout.INDEX_GRID_Y;
-        if (localX < 0 || localX >= SackOverlayLayout.INDEX_COLS * 18) return Optional.empty();
-        if (localY < 0 || localY >= SackOverlayLayout.INDEX_ROWS * 18) return Optional.empty();
-
-        int col = localX / 18;
-        int row = localY / 18;
-        int idx = row * SackOverlayLayout.INDEX_COLS + col;
-
+        int idx = indexSlotAt(mx, my);
         List<ItemStack> snap = state.getIndexSnapshot();
         if (idx >= 0 && idx < snap.size()) {
             ItemStack stack = snap.get(idx);
@@ -372,10 +391,6 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
     protected void containerTick() {
         super.containerTick();
         syncSlotPositions();
-
-        if (openKey.type() == SackKey.Type.SACK_INDEX && ContainerContentTracker.hasReceived(this.menu.containerId)) {
-            captureIndexSnapshot();
-        }
 
         // Handle pending auto-open: wait until server sends container items, then auto-click the target sack
         if (pendingAutoOpen != null && ContainerContentTracker.hasReceived(this.menu.containerId)) {
@@ -598,14 +613,27 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
         var panel = layout.getIndexPanel();
         if (panel == null) return;
 
-        int gx = panel.getTotalX() + SackOverlayLayout.INDEX_GRID_X;
-        int gy = panel.getTotalY() + SackOverlayLayout.INDEX_GRID_Y;
+        // Vanilla chest look: black outline, light-grey body, bevelled edges and sunken slots
+        int px = panel.getTotalX();
+        int py = panel.getTotalY();
+        int pw = panel.getWidth();
+        int ph = panel.getHeight();
+        guiGraphics.fill(px, py, px + pw, py + ph, 0xFF000000);
+        guiGraphics.fill(px + 1, py + 1, px + pw - 1, py + ph - 1, 0xFFC6C6C6);
+        guiGraphics.fill(px + 1, py + 1, px + pw - 2, py + 3, 0xFFFFFFFF);
+        guiGraphics.fill(px + 1, py + 1, px + 3, py + ph - 2, 0xFFFFFFFF);
+        guiGraphics.fill(px + 3, py + ph - 3, px + pw - 1, py + ph - 1, 0xFF555555);
+        guiGraphics.fill(px + pw - 3, py + 3, px + pw - 1, py + ph - 1, 0xFF555555);
+
+        int gx = px + SackOverlayLayout.INDEX_GRID_X;
+        int gy = py + SackOverlayLayout.INDEX_GRID_Y;
         for (int r = 0; r < SackOverlayLayout.INDEX_ROWS; r++) {
             for (int c = 0; c < SackOverlayLayout.INDEX_COLS; c++) {
                 int x = gx + c * 18;
                 int y = gy + r * 18;
-                guiGraphics.fill(x, y, x + 18, y + 18, 0x30FFFFFF);
-                guiGraphics.fill(x + 1, y + 1, x + 17, y + 17, 0x60000000);
+                guiGraphics.fill(x, y, x + 18, y + 18, 0xFF373737);
+                guiGraphics.fill(x + 1, y + 1, x + 18, y + 18, 0xFFFFFFFF);
+                guiGraphics.fill(x + 1, y + 1, x + 17, y + 17, 0xFF8B8B8B);
             }
         }
     }
@@ -616,15 +644,17 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
         super.extractContents(guiGraphics, mouseX, mouseY, a);
 
         var indexPanel = layout.getIndexPanel();
-        if (indexPanel != null && openKey.type() != SackKey.Type.SACK_INDEX) {
-            if (state.getIndexSnapshot().isEmpty()) {
-                String hint = HelpBoxLang.get("helpbox.ui.sacks.index_panel_empty", "Click to open Sack of Sacks");
+        if (indexPanel != null) {
+            boolean allEmpty = state.getIndexSnapshot().stream().allMatch(ItemStack::isEmpty);
+            if (allEmpty) {
+                String hint = HelpBoxLang.get("helpbox.ui.sacks.index_panel_empty", "Shift+click a sack in your inventory");
                 int tw = font.width(hint);
                 guiGraphics.text(font, hint,
                         indexPanel.getTotalX() + (indexPanel.getWidth() - tw) / 2,
-                        indexPanel.getTotalY() + indexPanel.getHeight() / 2 - 2, 0xFF94A3B8, true);
+                        indexPanel.getTotalY() + SackOverlayLayout.INDEX_GRID_Y + 32, 0xFF404040, false);
             }
-            if (isOverIndexPanel(mouseX, mouseY) && mouseY < indexPanel.getTotalY() + SackOverlayLayout.INDEX_GRID_Y) {
+            if (isOverIndexPanel(mouseX, mouseY) && indexSlotAt(mouseX, mouseY) >= 0
+                    && indexItemAt(mouseX, mouseY).isPresent()) {
                 guiGraphics.setTooltipForNextFrame(font,
                         List.of(Component.translatable("helpbox.ui.sacks.index_panel_open_hint")
                                 .withStyle(s -> s.withColor(0x55FF55).withItalic(false))),
@@ -733,20 +763,40 @@ public class SackContainerScreen extends AbstractContainerScreen<ChestMenu> impl
             return true;
         }
 
-        // Sack of Sacks panel (cached view): clicking a sack opens it; clicking empty area/header opens /sacks
-        if (openKey.type() != SackKey.Type.SACK_INDEX
-                && event.button() == InputConstants.MOUSE_BUTTON_LEFT
-                && this.menu.getCarried().isEmpty()
+        // Shift+left-click a sack in the player's inventory: add it to the Sack of Sacks panel
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && event.hasShiftDown()
+                && this.hoveredSlot != null && this.hoveredSlot.index >= this.menu.getRowCount() * 9
+                && isSackStack(this.hoveredSlot.getItem())) {
+            addToStash(this.hoveredSlot.getItem(), -1);
+            return true;
+        }
+
+        // Sack of Sacks panel (client-side stash)
+        if ((event.button() == InputConstants.MOUSE_BUTTON_LEFT || event.button() == InputConstants.MOUSE_BUTTON_RIGHT)
                 && isOverIndexPanel(event.x(), event.y())) {
-            indexItemAt(event.x(), event.y()).ifPresentOrElse(
-                    this::onPageCardClicked,
-                    () -> {
-                        Minecraft mc = Minecraft.getInstance();
-                        if (mc.player != null) {
-                            state.beginNavigation();
-                            mc.player.connection.sendCommand("sacks");
-                        }
-                    });
+            int idx = indexSlotAt(event.x(), event.y());
+            if (idx < 0) {
+                if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && openKey.type() != SackKey.Type.SACK_INDEX) {
+                    Minecraft mc = Minecraft.getInstance();
+                    if (mc.player != null) {
+                        state.beginNavigation();
+                        mc.player.connection.sendCommand("sacks");
+                    }
+                }
+                return true;
+            }
+            ItemStack carried = this.menu.getCarried();
+            if (!carried.isEmpty()) {
+                addToStash(carried, idx);
+                return true;
+            }
+            boolean hasItem = idx < state.getIndexSnapshot().size() && !state.getIndexSnapshot().get(idx).isEmpty();
+            if (!hasItem) return true;
+            if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT || event.hasShiftDown()) {
+                removeFromStash(idx);
+            } else {
+                indexItemAt(event.x(), event.y()).ifPresent(this::onPageCardClicked);
+            }
             return true;
         }
 
